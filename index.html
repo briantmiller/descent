@@ -52,10 +52,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #main{display:grid;grid-template-columns:minmax(0,1fr) 390px;min-height:0}
 #board{position:relative;min-height:0;min-width:0;background:radial-gradient(ellipse at center,#211a2e 0%,var(--ink) 75%)}
 #cv{display:block;touch-action:manipulation}
-#prompt{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;
-  background:var(--ink2);border:1px solid var(--amber);border-radius:999px;padding:6px 6px 6px 16px;font-weight:700;max-width:calc(100% - 24px);box-shadow:0 6px 24px #0008}
-#prompt span{min-width:0}
-#prompt button{background:var(--amber);color:var(--paper-ink);border:0;border-radius:999px;padding:5px 14px;font-weight:800;white-space:nowrap}
+#actwrap{position:relative}
+#prompt{position:absolute;left:10px;right:10px;bottom:10px;z-index:5;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;justify-content:space-between;
+  background:var(--ink);border:1px solid var(--amber);border-top-width:3px;border-radius:10px;padding:10px 10px 10px 14px;font-weight:700;box-shadow:0 -6px 24px #000a}
+#prompt span{min-width:0;flex:1 1 180px}
+#prompt .pbtns{display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto}
+#prompt button{background:var(--amber);color:var(--paper-ink);border:0;border-radius:8px;padding:8px 14px;font-weight:800;white-space:nowrap;min-height:40px}
 #tip{position:absolute;pointer-events:none;background:#0d0a14ee;border:1px solid var(--line2);border-radius:6px;padding:5px 8px;font-size:13px;white-space:nowrap}
 #tip small{color:var(--mute);font-family:var(--f-mono);font-size:11px}
 #side{min-width:0;border-left:1px solid var(--line);background:var(--ink2);display:flex;flex-direction:column;min-height:0;overflow:auto}
@@ -199,6 +201,8 @@ select{background:var(--ink);color:var(--fg);border:1px solid var(--line2);borde
 .facts .gold b{color:#f2c14a}
 .perkline{font:400 11px var(--f-mono);color:var(--amber)}
 @media (max-width:880px){
+  body:has(#prompt:not([hidden])) .toast{bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 130px)}
+  #prompt{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));z-index:15}
   body{overflow:auto}
   #app{height:auto;min-height:100%}
   #main{grid-template-columns:minmax(0,1fr)}
@@ -223,10 +227,10 @@ select{background:var(--ink);color:var(--fg);border:1px solid var(--line2);borde
     <button class="tbtn" id="btnMenu">Menu</button>
   </header>
   <div id="main">
-    <div id="board"><canvas id="cv"></canvas><div id="prompt" hidden><span id="promptT"></span><button id="promptC" class="cancel" hidden>Cancel</button><button id="promptB">Skip</button></div><div id="tip" hidden></div></div>
+    <div id="board"><canvas id="cv"></canvas><div id="tip" hidden></div></div>
     <aside id="side">
       <div class="sec"><div class="sech"><span>Initiative</span><span id="roundLbl"></span></div><div id="order"></div></div>
-      <div class="sec" id="act"></div>
+      <div id="actwrap"><div class="sec" id="act"></div><div id="prompt" hidden role="status"><span id="promptT"></span><span class="pbtns"><button id="promptC" class="cancel" hidden>Cancel</button><button id="promptB">Skip</button></span></div></div>
       <div class="sec"><div class="sech"><span>Crawlers</span><span>tap to inspect</span></div><div id="roster"></div></div>
       <div class="sec" id="feedsec"><div class="sech"><span>Broadcast feed</span></div><div id="feed"></div></div>
     </aside>
@@ -1189,7 +1193,7 @@ function layout(){
   const box=$('#board');const w=box.clientWidth,h=box.clientHeight;L.w=w;L.h=h;
   L.dpr=Math.min(2,window.devicePixelRatio||1);cv.width=Math.round(w*L.dpr);cv.height=Math.round(h*L.dpr);cv.style.width=w+'px';cv.style.height=h+'px';
   if(!G||!G.W)return;
-  const pad=8,top=46;
+  const pad=8,top=8;
   const size=Math.max(8,Math.min((w-pad*2)/(SQ3*(G.W+0.5)),(h-top-pad)/(1.5*G.H+0.5)));
   L.size=size;const bw=SQ3*size*(G.W+0.5),bh=size*(1.5*G.H+0.5);
   L.ox=(w-bw)/2+SQ3*size/2;L.oy=top+(h-top-pad-bh)/2+size;
@@ -1418,7 +1422,7 @@ function renderAct(){
       html+=`<div class="row"><button class="btn ghost" id="btnEnd" ${busy?'disabled':''}>End turn</button></div>`;
       el.innerHTML=html;
       el.querySelectorAll('[data-ci][data-h]').forEach(b=>b.onclick=()=>choose({type:'half',ci:+b.dataset.ci,half:b.dataset.h,basic:!!b.dataset.basic}));
-      el.querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>choose({type:'item',id:b.dataset.item}));
+      el.querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>confirmItem(b.dataset.item));
       $('#btnEnd').onclick=()=>choose({type:'end'});
       return;
     }
@@ -1466,6 +1470,21 @@ function openBox(){
   openModal(`<div class="k">Sponsor Box · contents legally classified as “a surprise”</div><h3>${esc(title)}</h3><div class="say" id="say"></div><div class="row"><button class="btn" id="mClose">Nice</button></div>`);
   type($('#say'),text);$('#mClose').onclick=()=>{closeModal();renderBoxes()};
   renderBoxes();
+}
+function confirmItem(id){
+  const I=ITEMS[id];if(!I||!G.turn)return;
+  const h=G.turn.h,a=I.c[0];let warn='';
+  if(a.k==='atk'){const r=a.r||1;if(!foesOf(h).some(f=>hdist(h,f)<=r+(a.aoe||0)&&los(h,f)))warn=`No monsters in range right now (Range ${a.r||'melee'}). Using it here would waste it.`}
+  if(a.k==='heal'&&!a.all&&h.hp>=maxHp(h)&&!h.st.poison)warn="You're already at full HP.";
+  if(a.k==='recover'&&!h.discard.length)warn='Your discard pile is empty, so there is nothing to recover.';
+  openModal(`<div class="k">Item · once per floor</div><h3>${esc(I.n)}</h3>
+    <div class="facts"><span>Effect <b>${esc(I.d.replace(/^Once per floor: /,''))}</b></span></div>
+    <div class="say" id="say"></div>
+    ${warn?`<p class="note" style="color:var(--hp)">${warn}</p>`:''}
+    <p class="note">Using it spends it until the next floor or your next long rest. It doesn't use up either card half, and you can still cancel before picking a hex.</p>
+    <div class="row"><button class="btn" id="mUse">Use it</button><button class="btn ghost" id="mClose">Not now</button></div>`);
+  type($('#say'),I.s);
+  $('#mUse').onclick=()=>{closeModal();choose({type:'item',id})};$('#mClose').onclick=closeModal;$('#mUse').focus();
 }
 function syncMgr(){const b=$('#btnMgr');if(!b)return;const ok=G&&!G.mgrUsed&&['plan','play'].includes(G.phase);b.disabled=!ok;b.textContent=G&&G.mgrUsed?'Manager used':'Call Manager'}
 function showParty(){
