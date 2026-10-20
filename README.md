@@ -20,3 +20,6 @@ After the first load the game works offline. Runs save in the browser at the sta
 - manifest.webmanifest — app name, colors, icons
 - sw.js — offline cache (bump VERSION when you change index.html)
 - icon-*.png — app icons
+
+## v2
+Perks and signature cards on level-up, gold and the Sponsor Store, two unlockable classes (Bulwark, Spreadsheet Necromancer), unlockable loot via Sponsor Boxes (saved per browser), optional fog of war, sound effects, Cancel for card actions, and a once-per-floor Manager with tactical tips.
