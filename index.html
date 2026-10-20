@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Descent Live</title>
+<meta name="theme-color" content="#15111d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>window.__PWA__=true</script>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+</head>
+<body>
+<style>
+/* Layout: a broadcast booth. Hex arena on the left, control desk on the right; stacks on phones. Single dark look by design. */
+:root{
+  --ink:#15111d; --ink2:#1d1828; --ink3:#282138; --line:#3a3150; --line2:#4c4168;
+  --paper:#efe2c4; --paper2:#e3d2ad; --paper-ink:#2b2117; --paper-mute:#7a6650;
+  --fg:#ece6f5; --mute:#a69dba; --dim:#6f6688;
+  --amber:#f2a93b; --sys:#ff6aa8; --hp:#e2524a; --good:#5cc98a; --cool:#62b9e6;
+  --f-disp:"Bungee","Impact","Arial Black",system-ui,sans-serif;
+  --f-body:"Alegreya Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--ink);color:var(--fg);font:16px/1.4 var(--f-body);overflow:hidden;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#app{height:100%;display:grid;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr);min-height:0}
+/* Top chyron */
+#top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:linear-gradient(90deg,#241c33,#1a1526);border-bottom:2px solid var(--amber)}
+.logo{font-family:var(--f-disp);font-size:20px;letter-spacing:.02em;color:var(--amber);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.onair{font:600 10px var(--f-mono);letter-spacing:.12em;background:var(--hp);color:#fff;padding:2px 6px;border-radius:3px;animation:blink 2.4s infinite}
+@keyframes blink{0%,70%{opacity:1}85%{opacity:.35}100%{opacity:1}}
+.chy{display:flex;gap:18px;flex-wrap:wrap;font:600 12px var(--f-mono);color:var(--mute);letter-spacing:.06em;text-transform:uppercase}
+.chy b{color:var(--fg);font-weight:600}
+.chy .vw b{color:var(--sys)}
+#top .sp{flex:1}
+.tbtn{background:transparent;border:1px solid var(--line2);border-radius:6px;padding:4px 10px;font:600 12px var(--f-mono);letter-spacing:.05em;color:var(--mute)}
+.tbtn:hover{color:var(--fg);border-color:var(--mute)}
+/* Main */
+#main{display:grid;grid-template-columns:minmax(0,1fr) 390px;min-height:0}
+#board{position:relative;min-height:0;min-width:0;background:radial-gradient(ellipse at center,#211a2e 0%,var(--ink) 75%)}
+#cv{display:block;touch-action:manipulation}
+#prompt{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;
+  background:var(--ink2);border:1px solid var(--amber);border-radius:999px;padding:6px 6px 6px 16px;font-weight:700;max-width:calc(100% - 24px);box-shadow:0 6px 24px #0008}
+#prompt span{min-width:0}
+#prompt button{background:var(--amber);color:var(--paper-ink);border:0;border-radius:999px;padding:5px 14px;font-weight:800;white-space:nowrap}
+#tip{position:absolute;pointer-events:none;background:#0d0a14ee;border:1px solid var(--line2);border-radius:6px;padding:5px 8px;font-size:13px;white-space:nowrap}
+#tip small{color:var(--mute);font-family:var(--f-mono);font-size:11px}
+#side{min-width:0;border-left:1px solid var(--line);background:var(--ink2);display:flex;flex-direction:column;min-height:0;overflow:auto}
+.sec{padding-block:12px;padding-left:16px;padding-right:16px;border-bottom:1px solid var(--line)}
+.sech{font:600 11px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 8px;display:flex;justify-content:space-between;gap:8px}
+/* Turn order */
+#order{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.chip{flex:0 0 auto;display:flex;align-items:center;gap:6px;background:var(--ink3);border:1px solid var(--line);border-radius:6px;padding:3px 8px 3px 4px;font-size:13px;font-weight:700}
+.chip .in{font:600 12px var(--f-mono);background:var(--ink);border-radius:4px;padding:1px 5px;color:var(--amber)}
+.chip.now{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+.chip.done{opacity:.4}
+.chip .dot{width:10px;height:10px;border-radius:50%}
+.chip.enemy .dot{border-radius:2px;transform:rotate(45deg)}
+/* Action desk */
+#act h3{font-family:var(--f-disp);font-weight:400;font-size:17px;margin:0 0 4px;line-height:1.15}
+#act p.sub{margin:0 0 10px;color:var(--mute);font-size:14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{background:var(--ink3);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:13px;font-weight:700}
+.tab.on{border-color:var(--amber);color:var(--amber)}
+.tab.ok::after{content:" ✓";color:var(--good)}
+.hand{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px}
+.card{position:relative;background:var(--paper);color:var(--paper-ink);border-radius:8px;border:2px solid transparent;padding:6px 7px 7px;display:flex;flex-direction:column;gap:4px;text-align:left;font-size:12.5px;line-height:1.25;min-width:0}
+.card .cn{font-weight:800;font-size:13px;line-height:1.1;padding-right:2px}
+.card .half{background:var(--paper2);border-radius:5px;padding:5px 6px;min-height:34px}
+.card .ini{align-self:center;font:400 14px var(--f-disp);color:var(--paper-ink);background:var(--paper);border:2px solid var(--paper-ink);border-radius:50%;width:32px;height:32px;display:grid;place-items:center;margin:-2px 0}
+.lost{display:inline-block;font:600 9px var(--f-mono);letter-spacing:.08em;background:var(--hp);color:#fff;border-radius:3px;padding:0 4px;margin-left:3px;vertical-align:1px}
+button.card{cursor:pointer}
+button.card:hover{border-color:var(--paper-mute)}
+.card.sel{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber)}
+.card .lead{position:absolute;top:-8px;right:6px;font:600 9px var(--f-mono);letter-spacing:.1em;background:var(--amber);color:var(--paper-ink);border-radius:3px;padding:1px 5px}
+.card.off{opacity:.45}
+.play2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pcard{background:var(--paper);color:var(--paper-ink);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.pcard .cn{font-weight:800;font-size:14px;display:flex;justify-content:space-between;gap:4px}
+.pcard .cn span{font:400 13px var(--f-disp)}
+.hbtn{background:var(--paper2);border:2px solid transparent;border-radius:6px;padding:6px 7px;text-align:left;font-size:13px;line-height:1.25;color:var(--paper-ink);min-height:44px}
+.hbtn:hover:not(:disabled){border-color:var(--paper-ink)}
+.hbtn:disabled{opacity:.38;cursor:not-allowed}
+.hbtn.used{background:#c9b48a;opacity:.6}
+.basic{background:transparent;border:1px dashed var(--paper-mute);border-radius:5px;padding:3px 6px;font-size:11.5px;color:var(--paper-mute)}
+.basic:hover:not(:disabled){color:var(--paper-ink);border-color:var(--paper-ink)}
+.basic:disabled{opacity:.35;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.btn{background:var(--amber);color:var(--paper-ink);border:0;border-radius:8px;padding:8px 14px;font-weight:800;font-size:14px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line2)}
+.btn.ghost:hover:not(:disabled){border-color:var(--mute)}
+.btn.item{background:var(--ink3);color:var(--fg);border:1px solid var(--line2);font-weight:700;font-size:13px;text-align:left}
+.note{font-size:13px;color:var(--mute);margin-top:8px}
+/* Roster */
+#roster{display:grid;gap:8px}
+.hero{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;align-items:start;background:var(--ink3);border:1px solid var(--line);border-radius:8px;padding:7px 8px;cursor:pointer;text-align:left;width:100%}
+.hero.now{border-color:var(--amber)}
+.hero.gone{opacity:.45}
+.tok{width:28px;height:28px;border-radius:50%;border:2px solid #fff;display:grid;place-items:center;font:400 10px var(--f-disp);color:#fff;text-shadow:0 1px 0 #0008}
+.hn{display:flex;justify-content:space-between;gap:6px;font-weight:800;font-size:14px}
+.hn small{font:400 11px var(--f-mono);color:var(--mute);white-space:nowrap}
+.bar{height:6px;background:#0007;border-radius:3px;margin:4px 0 3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--hp)}
+.meta{font:400 11px var(--f-mono);color:var(--mute);display:flex;gap:10px;flex-wrap:wrap}
+.st{font:600 10px var(--f-mono);border-radius:3px;padding:0 4px;margin-right:3px}
+.st.stun{background:#e6c34a;color:#221}.st.immob{background:#6aa0e0;color:#112}.st.poison{background:#7cc46a;color:#121}.st.sh{background:#b9b2cc;color:#111}.st.str{background:var(--amber);color:#221}
+/* Feed */
+#feedsec{flex:1;min-height:140px;display:flex;flex-direction:column}
+#feed{font:12px/1.5 var(--f-mono);display:flex;flex-direction:column;gap:5px;overflow:auto;max-height:260px;min-width:0}
+#feed div{overflow-wrap:anywhere}
+#feed .sys{color:var(--sys)}
+#feed .sys::before{content:"SYSTEM ▸ ";font-weight:600}
+#feed .ach{color:var(--amber)}
+#feed .dim{color:var(--dim)}
+/* Overlays */
+.scr{position:fixed;inset:0;z-index:20;background:var(--ink);overflow:auto;padding-block:max(20px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1100px;margin:0 auto}
+.hero-title{font-family:var(--f-disp);font-size:clamp(44px,10vw,104px);line-height:.9;color:var(--amber);margin:6vh 0 8px;text-wrap:balance;text-shadow:4px 4px 0 #6b2340}
+.kicker{font:600 12px var(--f-mono);letter-spacing:.2em;color:var(--sys);text-transform:uppercase}
+.lede{font-size:clamp(17px,2.2vw,21px);max-width:58ch;color:var(--fg);margin:14px 0 22px}
+.sysbox{font:13px/1.6 var(--f-mono);color:var(--sys);border-left:3px solid var(--sys);padding:8px 12px;background:#ff6aa80d;max-width:70ch}
+.big{font-size:17px;padding:12px 22px}
+.cls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:14px}
+.cls{background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.cls h4{margin:0;font:400 18px var(--f-disp);display:flex;gap:10px;align-items:center}
+.cls .role{font-size:14px;color:var(--mute);margin:0}
+.stats{display:flex;gap:12px;font:600 12px var(--f-mono);color:var(--mute)}
+.stats b{color:var(--fg)}
+.gear{font-size:13.5px;margin:0;padding-left:16px}
+.gear li{margin:1px 0}
+.deck{display:grid;gap:4px;font-size:12.5px;background:var(--ink);border-radius:6px;padding:8px;max-height:260px;overflow:auto}
+.deck div{display:grid;grid-template-columns:30px minmax(0,1fr);gap:6px}
+.deck b{font-family:var(--f-mono);color:var(--amber);font-weight:600}
+.deck small{color:var(--mute)}
+.party{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:10px}
+.slot{background:var(--ink3);border:1px solid var(--line2);border-radius:10px;padding:10px;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
+.slot .top{display:flex;gap:8px;align-items:center}
+.slot input{flex:1;min-width:0;background:var(--ink);border:1px solid var(--line2);border-radius:6px;color:var(--fg);padding:6px 8px;font:inherit;font-weight:700}
+.seg{display:flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden}
+.seg button{flex:1;background:transparent;border:0;padding:5px 8px;font-size:13px;font-weight:700;color:var(--mute)}
+.seg button.on{background:var(--amber);color:var(--paper-ink)}
+.x{background:transparent;border:1px solid var(--line2);border-radius:6px;width:32px;height:32px;color:var(--mute);font-weight:800}
+h2.ph{font:400 clamp(24px,4vw,36px) var(--f-disp);margin:8px 0 4px;color:var(--fg)}
+.flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+select{background:var(--ink);color:var(--fg);border:1px solid var(--line2);border-radius:6px;padding:6px 8px;font:inherit}
+#modal{position:fixed;inset:0;z-index:40;background:#07050bcc;display:grid;place-items:center;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.dlg{background:var(--ink2);border:1px solid var(--line2);border-top:4px solid var(--sys);border-radius:10px;max-width:560px;width:100%;max-height:calc(100vh - 40px);overflow:auto;padding:18px}
+.dlg h3{font:400 22px var(--f-disp);margin:4px 0 6px;line-height:1.1;text-wrap:balance}
+.dlg .k{font:600 11px var(--f-mono);letter-spacing:.16em;color:var(--sys);text-transform:uppercase}
+.dlg .facts{font:600 12.5px var(--f-mono);color:var(--mute);display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 12px}
+.dlg .facts b{color:var(--fg)}
+.dlg .say{font:14px/1.65 var(--f-mono);color:var(--sys);min-height:3em}
+.loot{display:grid;gap:12px;margin:12px 0}
+.lrow{background:var(--ink3);border-radius:8px;padding:10px}
+.lrow .hn{margin-bottom:6px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}
+.opt{background:var(--ink);border:1px solid var(--line2);border-radius:7px;padding:7px 8px;text-align:left;font-size:13px}
+.opt b{display:block;font-size:13.5px}
+.opt small{color:var(--mute)}
+.opt.on{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+.toast{position:fixed;z-index:50;left:50%;bottom:max(20px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1b1426;border:1px solid var(--amber);color:var(--amber);font:600 13px/1.4 var(--f-mono);padding:10px 14px;border-radius:8px;max-width:min(560px,calc(100vw - 32px));box-shadow:0 10px 30px #000a}
+.rules{font-size:15px;line-height:1.55}
+.rules li{margin:4px 0}
+@media (max-width:880px){
+  body{overflow:auto}
+  #app{height:auto;min-height:100%}
+  #main{grid-template-columns:minmax(0,1fr)}
+  .chy{gap:4px 12px;font-size:11px}
+  #board{height:clamp(320px,96vw,62vh)}
+  #side{border-left:0;border-top:1px solid var(--line);overflow:visible}
+  #feed{max-height:220px}
+  .logo{font-size:17px}
+}
+@media (prefers-reduced-motion:reduce){.onair{animation:none}}
+</style>
+
+<div id="app">
+  <header id="top">
+    <div class="logo"><span class="onair">ON AIR</span>DESCENT LIVE</div>
+    <div class="chy" id="chy"></div>
+    <div class="sp"></div>
+    <button class="tbtn" id="btnSpeed" title="AI speed">Speed: Normal</button>
+    <button class="tbtn" id="btnRules">Rules</button>
+    <button class="tbtn" id="btnMenu">Menu</button>
+  </header>
+  <div id="main">
+    <div id="board"><canvas id="cv"></canvas><div id="prompt" hidden><span id="promptT"></span><button id="promptB">Skip</button></div><div id="tip" hidden></div></div>
+    <aside id="side">
+      <div class="sec"><div class="sech"><span>Initiative</span><span id="roundLbl"></span></div><div id="order"></div></div>
+      <div class="sec" id="act"></div>
+      <div class="sec"><div class="sech"><span>Crawlers</span><span>tap to inspect</span></div><div id="roster"></div></div>
+      <div class="sec" id="feedsec"><div class="sech"><span>Broadcast feed</span></div><div id="feed"></div></div>
+    </aside>
+  </div>
+</div>
+
+<section class="scr" id="scrStart" hidden>
+  <div class="wrap">
+    <div class="kicker">Season 1 · Live from beneath the parking lot</div>
+    <h1 class="hero-title">DESCENT<br>LIVE</h1>
+    <p class="lede">A turn-based hex dungeon crawl, broadcast to an audience of billions. Pick crawlers, play two ability cards a turn, out-initiative the monsters, and go one floor deeper than you should.</p>
+    <div class="sysbox" id="startSys"></div>
+    <div class="flex" style="margin-top:22px">
+      <button class="btn big" id="btnNew">New crawl</button>
+      <button class="btn ghost big" id="btnCont" hidden>Continue run</button>
+      <button class="btn ghost big" id="btnRules2">How to play</button>
+    </div>
+  </div>
+</section>
+
+<section class="scr" id="scrParty" hidden>
+  <div class="wrap">
+    <div class="kicker">Pre-show · Contestant registration</div>
+    <h2 class="ph">Assemble your crawl party</h2>
+    <p style="color:var(--mute);margin:0 0 6px;max-width:70ch">Up to four crawlers. Each can be controlled by a player (pass the device around) or by the computer. Floors get meaner as you descend; a boss waits every third floor.</p>
+    <div class="sech" style="margin-top:16px"><span>Your party</span><span id="partyCount"></span></div>
+    <div class="party" id="party"></div>
+    <div class="flex" style="margin-top:14px">
+      <button class="btn big" id="btnStart">Enter the dungeon</button>
+      <label class="flex" style="gap:6px;color:var(--mute);font-size:14px" for="selSpeed">AI speed
+        <select id="selSpeed"><option value="420">Normal</option><option value="160">Fast</option><option value="750">Slow</option></select></label>
+      <button class="btn ghost" id="btnBack">Back</button>
+    </div>
+    <div class="sech" style="margin-top:26px"><span>Crawler classes</span><span>tap “Add” to recruit</span></div>
+    <div class="cls-grid" id="classes"></div>
+  </div>
+</section>
+
+<div id="modal" hidden></div>
+
+<script>
+"use strict";
+/* ============ utilities ============ */
+const $=s=>document.querySelector(s);
+const rnd=n=>Math.floor(Math.random()*n);
+const pick=a=>a[rnd(a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SQ3=Math.sqrt(3);
+const fmtV=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n);
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============ hex math (odd-r offset, pointy-top) ============ */
+const key=(c,r)=>c+','+r;
+function toCube(c,r){const x=c-(r-(r&1))/2;const z=r;return[x,-x-z,z]}
+function fromCube(x,z){return[x+(z-(z&1))/2,z]}
+function hdist(a,b){const A=toCube(a.c,a.r),B=toCube(b.c,b.r);return Math.max(Math.abs(A[0]-B[0]),Math.abs(A[1]-B[1]),Math.abs(A[2]-B[2]))}
+const CDIR=[[1,-1,0],[1,0,-1],[0,1,-1],[-1,1,0],[-1,0,1],[0,-1,1]];
+function neighbors(c,r){const[x,,z]=toCube(c,r);return CDIR.map(d=>{const[nc,nr]=fromCube(x+d[0],z+d[2]);return{c:nc,r:nr}})}
+function cubeRound(x,y,z){let rx=Math.round(x),ry=Math.round(y),rz=Math.round(z);const dx=Math.abs(rx-x),dy=Math.abs(ry-y),dz=Math.abs(rz-z);if(dx>dy&&dx>dz)rx=-ry-rz;else if(dy>dz)ry=-rx-rz;else rz=-rx-ry;return[rx,ry,rz]}
+function hexLine(a,b){const N=hdist(a,b),A=toCube(a.c,a.r),B=toCube(b.c,b.r),out=[];for(let i=0;i<=N;i++){const t=N?i/N:0;const p=cubeRound(A[0]+(B[0]-A[0])*t+1e-6,A[1]+(B[1]-A[1])*t+2e-6,A[2]+(B[2]-A[2])*t-3e-6);const[c,r]=fromCube(p[0],p[2]);out.push({c,r})}return out}
+const tile=(c,r)=>G.tiles.get(key(c,r));
+function los(a,b){return hexLine(a,b).every(h=>{const t=tile(h.c,h.r);return t&&t.type!=='wall'})}
+
+/* ============ content: steps & cards ============ */
+const A=(v,r=0,o={})=>({k:'atk',v,r,...o});
+const M=(v,j=0)=>({k:'mv',v,j});
+const H=(v,r=0,o={})=>({k:'heal',v,r,...o});
+const S=(v,o={})=>({k:'sh',v,...o});
+const STR=(o={})=>({k:'str',...o});
+const TRP=(v,o={})=>({k:'trap',v,...o});
+const EFF={stun:'Stun',immob:'Immobilize',poison:'Poison'};
+function stepText(s){
+  switch(s.k){
+    case'atk':{let t=`Attack ${s.v}`;if(s.r)t+=` · Range ${s.r}`;else t+=' · Melee';if(s.tg>1)t+=` · ${s.tg} targets`;if(s.aoe)t+=' · Blast';if(s.push)t+=` · Push ${s.push}`;(s.eff||[]).forEach(e=>t+=' · '+EFF[e]);return t}
+    case'mv':return`Move ${s.v}`+(s.j?' · Jump':'');
+    case'heal':return`Heal ${s.v}`+(s.all?` · allies within ${s.r}`:s.r?` · Range ${s.r}`:' · Self');
+    case'sh':return`Shield ${s.v}`+(s.all?` · allies within ${s.r}`:' · Self')+' (this round)';
+    case'str':return'Strengthen (+2 next attack)'+(s.all?` · allies within ${s.r}`:s.r?` · Range ${s.r}`:' · Self');
+    case'trap':return`Set trap · ${s.v} dmg`+(s.eff?' · '+s.eff.map(e=>EFF[e]).join(' · '):'');
+    case'recover':return`Recover ${s.v} discarded cards`;
+  }
+}
+const stepsText=a=>a.map(stepText).join('; then ');
+
+const CLASSES={
+  champ:{name:'Ring Champion',role:'Front-line wrestler. Big hits, shoves, shields.',col:'#d9534a',g:'RC',hp:12,rng:1,gear:['knux','chair'],
+    passive:'Sturdiest crawler. 12 HP.',
+    snark:"A Ring Champion. Thinks every problem is a match. To be fair, most problems down here are. Has the most HP on the team and the least interest in reading this.",
+    cards:[['Haymaker',20,[A(4)],[M(3)]],['Clothesline',35,[A(2,0,{tg:2})],[S(2)]],['Suplex',15,[A(3,0,{push:2})],[M(2),H(2)]],['Hype the Crowd',60,[STR(),H(3)],[M(4)]],
+      ['Steel Cage',70,[S(2,{all:1,r:2})],[M(3)]],['Flying Elbow',25,[M(3,1),A(4)],[M(3,1)],'T'],['Headlock',40,[A(2,0,{eff:['immob']})],[M(3)]],['The Finisher',10,[A(7,0,{eff:['stun']})],[A(2)],'T']]},
+  hex:{name:'Hexslinger',role:'Glass-cannon caster. Fire, frost, and blasts at range.',col:'#9b6cf0',g:'HX',hp:7,rng:3,gear:['scope','potion'],
+    passive:'Fragile. 7 HP, nine spells.',
+    snark:"A Hexslinger. Throws fire at things from a safe distance, then complains loudly when the distance becomes unsafe. Seven hit points. The System has seen sturdier soufflés.",
+    cards:[['Firebolt',30,[A(3,3)],[M(2)]],['Fireball',45,[A(2,3,{aoe:1})],[M(3)]],['Frost Lance',20,[A(2,4,{eff:['stun']})],[M(2)]],['Blink',10,[M(5,1)],[A(1,3)]],
+      ['Arcane Ward',65,[S(2),H(2)],[M(3)]],['Chain Lightning',25,[A(2,3,{tg:3})],[M(2)]],['Meteor of Regret',80,[A(5,4,{aoe:1})],[H(2)],'T'],['Mana Siphon',50,[A(2,2),H(2)],[M(3)]],['Gravity Hex',35,[A(1,3,{eff:['immob'],push:1})],[M(2)]]]},
+  cut:{name:'Cutpurse',role:'Fast skirmisher. Flanks, poisons, vanishes.',col:'#2fb3a3',g:'CP',hp:9,rng:1,gear:['crocs','smoke'],flank:1,
+    passive:'Flanking: +2 damage when another crawler is next to the target.',
+    snark:"A Cutpurse. Steals hearts, mostly by stabbing near them. Deals +2 damage when an ally is next to the target, because teamwork is just ganging up with better branding.",
+    cards:[['Quick Stab',8,[A(3)],[M(4)]],['Poisoned Blade',22,[A(2,0,{eff:['poison']})],[M(3)]],['Shadowstep',12,[M(5,1)],[A(2)]],['Knife Toss',30,[A(2,3,{tg:2})],[M(3)]],
+      ['Kidney Shot',18,[A(3,0,{eff:['stun']})],[M(4)],'T'],['Smoke Bomb',40,[S(3)],[M(4,1)]],['Pickpocket',55,[A(2),H(1)],[M(3)]],['Death by Paper Cuts',14,[A(2,0,{tg:3})],[M(3)]]]},
+  medic:{name:'Field Medic',role:'Support. Heals, shields, tranquilizer darts.',col:'#58b85c',g:'FM',hp:9,rng:2,gear:['medkit','drink'],
+    passive:'Best healer. Keeps everyone vertical.',
+    snark:"A Field Medic. The only crawler who read the safety manual. It did not help, but the medic is very calm about that.",
+    cards:[['Triage',50,[H(4,2)],[M(3)]],['Bonesaw',30,[A(3)],[H(2,1)]],['Adrenaline Shot',20,[STR({r:2}),H(1,2)],[M(4)]],['Field Dressing',60,[H(2,2,{all:1})],[M(2)]],
+      ['Tranq Dart',25,[A(1,4,{eff:['stun']})],[M(3)]],['Defibrillator',75,[H(6,1)],[S(1,{all:1,r:2})],'T'],['Bedside Manner',40,[A(2,2,{eff:['poison']})],[H(2)]],['Scalpel Flourish',15,[A(3)],[M(3)]],['Shield the Weak',65,[S(2,{all:1,r:2})],[M(2)]]]},
+  bard:{name:'Bard of Bad Decisions',role:'Buffer and controller. Songs that help friends and hurt feelings.',col:'#e9a23b',g:'BD',hp:10,rng:3,gear:['sweater','potion'],
+    passive:'Party-wide strengthen and heals.',
+    snark:"A Bard of Bad Decisions. Every song makes your allies stronger and the audience weaker. The audience is the monsters. Also the viewers at home, who are begging for it to stop.",
+    cards:[['Power Ballad',45,[STR({all:1,r:2})],[M(3)]],['Diss Track',28,[A(2,3,{eff:['immob']})],[M(3)]],['Drop the Beat',35,[A(2,2,{aoe:1})],[H(2,2)]],['Lullaby',55,[A(1,3,{eff:['stun']})],[M(3)]],
+      ['Encore',70,[H(3,2,{all:1})],[M(2)],'T'],['Lute Smash',20,[A(3)],[M(3)]],['Crowd Surf',15,[M(4,1)],[A(2)]],['Feedback Loop',40,[A(2,3,{tg:2})],[S(1,{all:1,r:2})]]]},
+  sapper:{name:'Sapper',role:'Demolitions. Bombs, shrapnel, and hidden traps.',col:'#e5703a',g:'SP',hp:10,rng:2,gear:['lid','grenade'],
+    passive:'Sets traps monsters cannot see.',
+    snark:"A Sapper. Bombs, traps, and a deep personal relationship with the phrase 'stand back.' Monsters cannot see the Sapper's traps. Neither can the Sapper's eyebrows, which are gone.",
+    cards:[['Pipe Bomb',40,[A(2,3,{aoe:1})],[M(3)]],['Bear Trap',55,[TRP(4,{eff:['immob']})],[M(3)]],['Shrapnel',30,[A(2,2,{tg:3})],[M(2)]],['Wrench',20,[A(3)],[M(3)]],
+      ['Barricade',65,[S(3)],[M(3)]],['Big Red Button',85,[A(5,3,{aoe:1})],[TRP(3)],'T'],['Proximity Mine',35,[TRP(3,{eff:['stun']})],[A(2)]],['Rocket Boots',10,[M(5,1)],[A(2,2)]]]},
+};
+for(const k in CLASSES){CLASSES[k].deck=CLASSES[k].cards.map((c,i)=>({idx:i,n:c[0],i:c[1],t:c[2],b:c[3],L:c[4]||''}))}
+
+const ITEMS={
+  knux:{n:'Brass Knuckles',d:'+1 melee damage',p:{atk:1},s:'Knuckles of brass, morals of tin.'},
+  scope:{n:'Scope of Mild Accuracy',d:'+1 ranged damage',p:{rng:1},s:'Duct-taped to nothing in particular. Somehow helps.'},
+  sweater:{n:'Ugly Sweater of Fortitude',d:'+2 max HP',p:{hp:2},s:'Monsters avoid looking directly at it.'},
+  crocs:{n:'Crocs of Haste (Sport Mode)',d:'+1 to every Move',p:{mv:1},s:'Heel strap engaged. Shame disengaged.'},
+  lid:{n:'Trash Can Lid',d:'Permanent Shield 1',p:{sh:1},s:'Smells like a shield. Works like one too.'},
+  medkit:{n:'Expired Med Kit',d:'+1 to every Heal',p:{heal:1},s:'Best before: the apocalypse.'},
+  tag:{n:'Laminated Name Tag',d:'+1 melee and ranged damage',p:{atk:1,rng:1},s:'HELLO MY NAME IS: Problem.'},
+  plot:{n:'Plot Armor (Used)',d:'+3 max HP',p:{hp:3},s:'Previous owner died anyway. Still works, probably.'},
+  boots:{n:'Steel-Toe Loafers',d:'+1 melee damage, +1 max HP',p:{atk:1,hp:1},s:'Business casual. Violence formal.'},
+  potion:{n:'Health Potion (Grape)',d:'Once per floor: Heal 4 self',c:[H(4)],s:'Tastes like the color purple.'},
+  drink:{n:'Off-Brand Energy Drink',d:'Once per floor: recover 2 discarded cards',c:[{k:'recover',v:2}],s:'Contains 400% of your daily heart palpitations.'},
+  chair:{n:'Folding Chair',d:'Once per floor: Attack 3 · Stun',c:[A(3,0,{eff:['stun']})],s:'A classic. Like a wrestling move, but legal here.'},
+  grenade:{n:'Gas Station Grenade',d:'Once per floor: Attack 3 · Range 3 · Blast',c:[A(3,3,{aoe:1})],s:'Found next to the beef jerky. Do not eat.'},
+  smoke:{n:'Smoke Pellet',d:'Once per floor: Move 4 · Jump',c:[M(4,1)],s:'Poof. You were never here. You were definitely here.'},
+  coupon:{n:'Coupon for One (1) Miracle',d:'Once per floor: Heal 3 to allies within 3',c:[H(3,3,{all:1})],s:'Expires today. Every day.'},
+  taser:{n:'Novelty Taser',d:'Once per floor: Attack 2 · Range 2 · Stun',c:[A(2,2,{eff:['stun']})],s:'Says "NOVELTY" on the side. The monsters cannot read.'},
+};
+
+const ETYPES={
+  rat:{n:'Tax Rat',hp:3,mv:3,atk:1,cost:1,col:'#9a8569',g:'TR',tier:1,cards:[{n:'Scurry',i:14,mv:1,atk:0},{n:'Nibble',i:32,mv:0,atk:1},{n:'Audit',i:50,mv:-1,atk:1,eff:['poison']}],
+    snark:["A Tax Rat. It has been auditing this sewer since before you were born and it has found irregularities in your soul. Bites for 1. Files for extensions forever.","Statistically the Tax Rat is the leading cause of death on Floor 1. Not because it's dangerous. Because crawlers keep laughing at it while it chews their ankles."]},
+  mopbot:{n:'Mopbot 3000',hp:6,mv:2,atk:2,sh:1,cost:2,col:'#7d92a8',g:'MB',tier:1,cards:[{n:'Wet Floor',i:40,mv:0,atk:0,eff:['immob']},{n:'Polish',i:62,mv:-1,atk:1,sh:1},{n:'Sweep',i:28,mv:1,atk:-1}],
+    snark:["A janitorial unit reprogrammed for violence by a firmware update nobody approved. Shield 1, because someone in Facilities really cared about liability.","The Mopbot 3000 will clean up your remains, which is more than your last employer offered."]},
+  intern:{n:'Skeleton Intern',hp:4,mv:2,atk:2,rng:3,cost:2,col:'#d8d0b8',g:'SI',tier:1,cards:[{n:'Fetch Coffee',i:22,mv:1,atk:-1},{n:'Quarterly Bolt',i:45,mv:0,atk:1},{n:'Overtime',i:70,mv:-1,atk:2}],
+    snark:["An unpaid skeleton intern with a crossbow. It is working for exposure. You are the exposure.","It died during orientation and kept showing up. Management calls that culture fit. Shoots at Range 3."]},
+  wraith:{n:'Influencer Wraith',hp:5,mv:3,atk:1,rng:3,fly:1,cost:2,col:'#a184dc',g:'IW',tier:1,cards:[{n:'Go Live',i:18,mv:1,atk:0,eff:['poison']},{n:'Callout Post',i:38,mv:0,atk:1},{n:'Collab',i:55,mv:0,atk:0,tg:2,eff:['poison']}],
+    snark:["The ghost of someone who posted their way into the afterlife. Its attacks inflict Poison. Mostly emotional poison. Also regular poison. It floats over traps, because of course it does.","It wants you to like and subscribe. Do not like. Do not subscribe. Hit it with something heavy."]},
+  manager:{n:'Goblin Middle Manager',hp:6,mv:2,atk:2,cost:2,col:'#6f9e4d',g:'GM',tier:2,cards:[{n:'Synergy',i:30,mv:0,atk:0,str:1},{n:'Circle Back',i:48,mv:1,atk:0},{n:'Performance Review',i:65,mv:-1,atk:2}],
+    snark:["Does nothing much itself. Makes everyone around it hit harder. You have met this goblin at every job you have ever had.","It has scheduled a meeting about your death. The meeting could have been an email."]},
+  slime:{n:'Franchise Slime',hp:7,mv:1,atk:2,cost:2,col:'#4fb784',g:'FS',tier:2,cards:[{n:'Expand Market',i:58,mv:1,atk:0,eff:['poison']},{n:'Ooze',i:72,mv:0,atk:1},{n:'Grand Opening',i:44,mv:0,atk:0,heal:2}],
+    snark:["Slow, sticky, and opening new locations near you. Its touch is poisonous. Its business model is worse.","Each Franchise Slime is independently owned and operated, which is why none of them will take responsibility for eating you."]},
+  santa:{n:'Feral Mall Santa',hp:10,mv:2,atk:3,cost:3,col:'#c4413f',g:'MS',tier:3,cards:[{n:'Naughty List',i:20,mv:0,atk:1},{n:'Sleigh Rush',i:35,mv:2,atk:0},{n:'Coal Sack',i:60,mv:0,atk:1,push:1}],
+    snark:["Nobody remembers who hired the mall Santa. Nobody remembers when he stopped taking breaks. He knows if you've been bad. You have been. Hits for 3.","The beard is real. The belly is real. The rage is extremely real. The candy cane is a weapon now."]},
+  bouncer:{n:'Gargoyle Bouncer',hp:9,mv:1,atk:3,sh:2,cost:3,col:'#8e929e',g:'GB',tier:3,cards:[{n:'Not Tonight',i:50,mv:0,atk:0,sh:1},{n:'Velvet Rope',i:68,mv:0,atk:1,eff:['immob']},{n:'Escort Out',i:40,mv:1,atk:0,push:2}],
+    snark:["Shield 2, attitude 10. Your name is not on the list. Your name will never be on the list.","A gargoyle with a clipboard. It turned to stone in 1997 and refused to turn back out of spite."]},
+  overdraft:{n:'Lord Overdraft, Banker of Bones',hp:18,mv:2,atk:3,rng:2,tg:2,boss:1,col:'#d6a937',g:'LO',cards:[{n:'Late Fee',i:25,mv:0,atk:0},{n:'Compound Interest',i:45,mv:-1,atk:2},{n:'Foreclosure',i:60,mv:0,atk:1,eff:['immob']}],
+    snark:["Floor boss. He has charged you a fee for reading this description, plus a second fee for the first fee. Attacks two crawlers at once at Range 2, because compound interest is a hell of a thing.","Lord Overdraft keeps a ledger of every crawler he has defeated. It is bound in crawler. Don't think about it."]},
+  mascot:{n:'The Unlicensed Mascot',hp:22,mv:3,atk:4,boss:1,col:'#e07ab0',g:'UM',cards:[{n:'Big Hug',i:30,mv:0,atk:0,push:1},{n:'Photo Op',i:15,mv:1,atk:-1,eff:['stun']},{n:'Merch Toss',i:50,mv:-1,atk:1}],
+    snark:["Floor boss. A beloved cartoon character whose legal team we cannot afford to name. Hugs for 4 damage and pushes you away, like your dad.","The smile is painted on. The suit is fused on. Somewhere inside, a summer employee is still waiting for a break."]},
+  mildew:{n:'Mother Mildew',hp:20,mv:1,atk:2,rng:3,tg:2,boss:1,col:'#86ad58',g:'MM',cards:[{n:'Spore Cloud',i:40,mv:0,atk:0,eff:['poison']},{n:'Call the Kids',i:55,mv:0,atk:-1,summon:'slime'},{n:'Damp Embrace',i:70,mv:0,atk:1,heal:3}],
+    snark:["Floor boss. Matriarch of the damp. Summons Franchise Slimes, poisons from range, and has strong opinions about your posture.","Mother Mildew has outlived three ventilation systems and one inspector. The inspector is still here, technically. As a slime."]},
+};
+const BOSSES=['overdraft','mascot','mildew'];
+
+const TRAPS={
+  spike:{n:'Spike Plate',dmg:2,eff:[],col:'#d65a4f',s:["A Spike Plate. Ancient technology: a plate, with spikes. Some crawlers step on it on purpose for the achievement. There is no achievement. Fine, there is an achievement."]},
+  glue:{n:'Industrial Glue Trap',dmg:1,eff:['immob'],col:'#c9b347',s:["Industrial Glue Trap. Originally designed for rats. Upgraded for you. Step on it and you are staying put, like a houseguest."]},
+  shock:{n:'Shock Tile',dmg:2,eff:['stun'],col:'#5ab0e6',s:["Shock Tile. Delivers enough voltage to stun you and also fix your posture. Only one of those is a feature."]},
+  bear:{n:'Bear Trap (Bear Not Included)',dmg:4,eff:['immob'],col:'#a7703f',s:["Bear Trap. The bear was eaten by something on Floor 4. The trap remains, carrying on the family business."]},
+  vent:{n:'Poison Vent',dmg:1,eff:['poison'],col:'#7cc46a',s:["Poison Vent. It smells like a gym bag that has seen things. Inhale for complimentary Poison."]},
+};
+const HERO_TRAP_SNARK="A trap placed by your own team. The monsters can't see it. The System can. The System is rooting for the trap.";
+
+const THEMES=[
+  {n:'The Sewer Lobby',fl:['#2e3a35','#33403a','#2a352f'],wall:'#151b18',rim:'#567566',intro:"Ambient humidity: 100%. Ambient dignity: 0%. Please keep your mouth closed while screaming."},
+  {n:'Food Court of the Damned',fl:['#4a3c31','#534538','#43362c'],wall:'#1d1612',rim:'#8f6e50',intro:"Every kiosk is closed except the pretzel place. The pretzel place is always open. Do not ask the pretzel place why."},
+  {n:'Parking Level P-Infinite',fl:['#3b3c44','#43444c','#35363d'],wall:'#16161b',rim:'#6e7080',intro:"You will forget where you parked. You did not bring a car. You will forget anyway."},
+  {n:'The Server Farm',fl:['#24334a','#293a52','#202e43'],wall:'#0e1520',rim:'#5480b0',intro:"Everything here is cloud-based, which is ironic, since you are underground and the cloud is on fire."},
+];
+const NAMES=['Dale','Brenda','Kev','Marjorie','Tobias','Shonda','Gary','Pip','Ruthie','Doug','Lorraine','Vince','Barb','Nico','Wendell','Tamsin'];
+const ACH={
+  firstblood:"Achievement Unlocked: First Blood! Reward: you now have blood on you. Congratulations.",
+  overkill:"Achievement Unlocked: Overkill! You did far more damage than was needed. The viewers love waste.",
+  trapped:"Achievement Unlocked: Spatial Awareness (Negative)! You stepped on a clearly visible trap. Clearly. Visible.",
+  bossdown:"Achievement Unlocked: Under New Management! You killed a floor boss. Your reward is a harder floor.",
+  looted:"Achievement Unlocked: Box Goblin! You opened a treasure chest. It was not a mimic. This time.",
+  exhausted:"Achievement Unlocked: Burnout! A crawler ran out of cards. Relatable.",
+  down:"Achievement Unlocked: Content! A crawler went down on live television. Ratings are through the roof.",
+  rest:"Achievement Unlocked: Self Care! You took a nap in a dungeon. The monsters respect the hustle.",
+  stunner:"Achievement Unlocked: Lights Out! You stunned something. It is now thinking about its choices.",
+};
+const MODS=[0,0,0,0,0,0,1,1,1,1,1,-1,-1,-1,-1,-1,2,-2,'x2','miss'];
+
+/* ============ state ============ */
+let G=null;
+let SPEED=420;
+const SAVE_KEY='descent-live-v1';
+
+function deckOf(h){return CLASSES[h.cls].deck}
+function bonus(h){const b={atk:0,rng:0,hp:0,mv:0,sh:0,heal:0};for(const id of h.items){const p=ITEMS[id].p;if(p)for(const k in p)b[k]+=p[k]}return b}
+function maxHp(u){return u.side==='hero'?CLASSES[u.cls].hp+u.lvl+bonus(u).hp:u.maxHp}
+function liveHeroes(){return G.heroes.filter(h=>!h.down&&!h.exhausted)}
+function alive(u){return u.side==='hero'?!u.down&&!u.exhausted:G.enemies.includes(u)}
+function allUnits(){return[...liveHeroes(),...G.enemies]}
+function unitAt(c,r){return allUnits().find(u=>u.c===c&&u.r===r)}
+function foesOf(u){return u.side==='hero'?G.enemies:liveHeroes()}
+function friendsOf(u){return u.side==='hero'?liveHeroes():G.enemies}
+function over(){return !G.enemies.length||!liveHeroes().length}
+function shieldOf(u){return (u.st.shield||0)+(u.side==='hero'?bonus(u).sh:(u.sh||0))}
+function heroById(id){return G.heroes.find(h=>h.id===id)}
+function unitById(id){return allUnits().find(u=>u.id===id)}
+function newSt(){return{stun:0,immob:0,poison:0,shield:0,str:0}}
+
+/* ============ feed & toasts ============ */
+function log(t,cls=''){G.log.push({t,cls});if(G.log.length>120)G.log.shift();renderFeed()}
+function sys(t){log(t,'sys')}
+let toastTimer;
+function toast(t){let el=$('#toast');if(!el){el=document.createElement('div');el.id='toast';el.className='toast';document.body.appendChild(el)}el.textContent=t;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,3600)}
+function ach(id){if(G.ach.includes(id))return;G.ach.push(id);G.viewers+=5000+rnd(5000);log(ACH[id],'ach');toast(ACH[id])}
+
+/* ============ floor generation ============ */
+function genFloor(n){
+  const W=13+Math.min(4,Math.floor(n/2)),H=11+Math.min(2,Math.floor(n/3));
+  G.W=W;G.H=H;G.tiles=new Map();G.theme=(n-1)%THEMES.length;
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++)G.tiles.set(key(c,r),{c,r,type:'wall',v:Math.random()});
+  const inner=(c,r)=>c>0&&c<W-1&&r>0&&r<H-1;
+  const carve=(c,r)=>{if(inner(c,r))tile(c,r).type='floor'};
+  const rooms=[{c:2,r:Math.floor(H/2)-1+rnd(3),rad:2}];
+  const want=4+Math.min(3,Math.floor(n/2));
+  for(let t=0;t<600&&rooms.length<want;t++){
+    const rad=1+rnd(2),c=1+rad+rnd(W-2-2*rad),r=1+rad+rnd(H-2-2*rad);
+    if(rooms.every(o=>hdist(o,{c,r})>=o.rad+rad+2))rooms.push({c,r,rad});
+  }
+  rooms.sort((a,b)=>hdist(rooms[0],a)-hdist(rooms[0],b));
+  for(const rm of rooms)for(const t of G.tiles.values())if(hdist(rm,t)<=rm.rad)carve(t.c,t.r);
+  for(let i=1;i<rooms.length;i++){
+    let best=0;for(let j=0;j<i;j++)if(hdist(rooms[i],rooms[j])<hdist(rooms[i],rooms[best]))best=j;
+    for(const h of hexLine(rooms[i],rooms[best]))carve(h.c,h.r);
+  }
+  if(rooms.length>3){const a=rooms[1+rnd(rooms.length-1)],b=rooms[1+rnd(rooms.length-1)];if(a!==b)for(const h of hexLine(a,b))carve(h.c,h.r)}
+  for(const t of [...G.tiles.values()]){if(t.type==='wall'&&inner(t.c,t.r)){const f=neighbors(t.c,t.r).filter(h=>{const x=tile(h.c,h.r);return x&&x.type==='floor'}).length;if(f>=3&&Math.random()<.45)t.type='floor'}}
+  const floors=()=>[...G.tiles.values()].filter(t=>t.type==='floor');
+  const start=rooms[0],last=rooms[rooms.length-1];
+  tile(last.c,last.r).stairs=true;
+  const connected=()=>{const all=floors().filter(t=>!t.obst);const seen=new Set([key(start.c,start.r)]);const q=[start];while(q.length){const p=q.shift();for(const nb of neighbors(p.c,p.r)){const k=key(nb.c,nb.r),t=G.tiles.get(k);if(t&&t.type==='floor'&&!t.obst&&!seen.has(k)){seen.add(k);q.push(nb)}}}return seen.size===all.length};
+  let obs=2+rnd(3)+Math.floor(n/3);
+  for(const t of shuffle(floors())){if(obs<=0)break;if(hdist(t,start)<=3||t.stairs)continue;t.obst=true;if(!connected())t.obst=false;else obs--}
+  const far=()=>shuffle(floors().filter(t=>!t.obst&&!t.trap&&!t.stairs&&!t.chest&&hdist(t,start)>3));
+  const pool=['spike','glue','shock'];if(n>=2)pool.push('vent');if(n>=4)pool.push('bear');
+  let nt=Math.min(9,2+Math.floor(n*0.8));
+  for(const t of far()){if(nt--<=0)break;const ty=pick(pool);t.trap={type:ty,owner:'env',dmg:TRAPS[ty].dmg+Math.floor((n-1)/3),eff:TRAPS[ty].eff}}
+  let nc=1+(n%2===0?1:0);for(const t of far()){if(nc--<=0)break;t.chest=true}
+  return{rooms,start};
+}
+function spawnFloor(n){
+  const {rooms,start}=genFloor(n);
+  const sp=[...G.tiles.values()].filter(t=>t.type==='floor'&&!t.obst&&!t.trap).sort((a,b)=>hdist(a,start)-hdist(b,start));
+  liveHeroes().forEach((h,i)=>{const t=sp[i];h.c=t.c;h.r=t.r;h._x=null});
+  G.heroes.filter(h=>h.down||h.exhausted).forEach(h=>{h.c=-99;h.r=-99});
+  const party=G.heroes.length;
+  let budget=Math.round((2+party*2.2)*(1+(n-1)*0.22));
+  const comp=[];
+  if(n%3===0){comp.push({type:BOSSES[(n/3-1)%BOSSES.length],elite:0});budget=Math.round(budget*0.5)}
+  const tier=n<=2?1:n<=5?2:3;
+  const types=Object.keys(ETYPES).filter(k=>!ETYPES[k].boss&&ETYPES[k].tier<=tier);
+  let guard=0;
+  while(budget>0&&comp.length<11&&guard++<60){
+    const opts=types.filter(k=>ETYPES[k].cost<=budget);if(!opts.length)break;
+    const ty=pick(opts);const elite=Math.random()<Math.min(0.45,0.07*n)&&ETYPES[ty].cost+1<=budget?1:0;
+    comp.push({type:ty,elite});budget-=ETYPES[ty].cost+elite;
+  }
+  const cand=[...G.tiles.values()].filter(t=>t.type==='floor'&&!t.obst&&!t.trap&&!t.chest&&hdist(t,start)>=4);
+  const groups=rooms.slice(1).map(rm=>shuffle(cand.filter(t=>hdist(t,rm)<=rm.rad+1)));
+  const rest=shuffle(cand.slice());
+  const used=new Set();
+  const take=(arr)=>{for(const t of arr){const k=key(t.c,t.r);if(!used.has(k)){used.add(k);return t}}return null};
+  G.enemies=[];let gi=groups.length-1;
+  for(const c of comp){
+    let t=null;
+    if(ETYPES[c.type].boss)t=take(groups[groups.length-1]||[]);
+    for(let tries=0;!t&&tries<groups.length;tries++){t=take(groups[gi]||[]);gi=(gi-1+groups.length)%groups.length}
+    if(!t)t=take(rest);if(!t)break;
+    addEnemy(c.type,c.elite,t.c,t.r,n);
+  }
+}
+function addEnemy(type,elite,c,r,n){
+  const T=ETYPES[type];const party=G.heroes.length;
+  let hp=Math.round(T.hp*(1+0.18*(n-1)));
+  if(T.boss)hp=Math.round(T.hp*(0.55+0.3*party)*(1+0.12*(n-1)));
+  if(elite)hp=Math.round(hp*1.5)+1;
+  const e={id:++G.uid,side:'enemy',type,elite,boss:!!T.boss,name:(elite?'Elite ':'')+T.n,c,r,hp,maxHp:hp,
+    atk:T.atk+Math.floor((n-1)/3)+elite,mv:T.mv,rng:T.rng||0,sh:(T.sh||0)+(elite&&T.sh?1:0),fly:!!T.fly,tg:T.tg||1,st:newSt(),snark:pick(T.snark)};
+  G.enemies.push(e);return e;
+}
+
+/* ============ setup ============ */
+function newGame(party){
+  G={floor:0,uid:0,deaths:[],heroes:[],enemies:[],tiles:new Map(),log:[],ach:[],round:0,phase:'plan',viewers:1204+rnd(300),kills:0,order:[],ecards:{},active:null,pick:null,turn:null,planTab:null,W:0,H:0,theme:0};
+  for(const p of party){
+    const C=CLASSES[p.cls];
+    G.heroes.push({id:++G.uid,side:'hero',cls:p.cls,name:p.name||C.name,human:p.human,c:0,r:0,hp:C.hp,lvl:0,hand:C.deck.map(d=>d.idx),discard:[],lost:[],items:C.gear.slice(),used:{},sel:[],rest:false,st:newSt(),down:false,exhausted:false,kills:0,g:C.g});
+  }
+  for(const h of G.heroes)h.hp=maxHp(h);
+  sys("Welcome, Crawlers. The surface has been cancelled due to low ratings. You are now contestants. Kill things, open boxes, and please try not to embarrass the sponsors.");
+  nextFloor();
+}
+function nextFloor(){
+  G.floor++;G.round=0;G.ach=G.ach.filter(a=>a!=='rest');
+  for(const h of G.heroes){
+    if(h.down||h.exhausted){h.down=false;h.exhausted=false}
+    h.hand=deckOf(h).map(d=>d.idx);h.discard=[];h.lost=[];h.used={};h.st=newSt();h.hp=maxHp(h);h.sel=[];h.rest=false;
+  }
+  spawnFloor(G.floor);
+  const th=THEMES[G.theme];
+  sys(`Floor ${G.floor}: ${th.n}. ${th.intro}`);
+  if(G.floor%3===0){const b=G.enemies.find(e=>e.boss);if(b)sys(`Boss alert. ${b.name} is on this floor. The System has already sold the highlight reel.`)}
+  layout();startRound();
+}
+
+/* ============ rounds ============ */
+function startRound(){
+  G.round++;G.phase='plan';G.order=[];G.ecards={};G.active=null;
+  for(const h of G.heroes){
+    if(h.down||h.exhausted)continue;
+    h.sel=[];h.rest=false;h.forced=false;
+    if(h.hand.length<2&&h.hand.length+h.discard.length<2){h.exhausted=true;h.c=-99;h.r=-99;log(`${h.name} is out of cards and collapses from exhaustion.`);ach('exhausted');continue}
+    if(h.hand.length<2){h.rest=true;h.forced=true;continue}
+    if(!h.human)aiPlan(h);
+  }
+  if(!liveHeroes().length)return gameOver();
+  G.planTab=(liveHeroes().find(h=>h.human&&!h.rest)||{}).id||null;
+  save();renderAll();
+  if(!liveHeroes().some(h=>h.human&&!h.forced))setTimeout(()=>{if(G&&G.phase==='plan')beginRound()},Math.max(500,SPEED*2));
+}
+function planned(){return liveHeroes().every(h=>h.rest||h.sel.length===2)}
+async function beginRound(){
+  if(G.phase!=='plan'||!planned())return;
+  G.phase='play';
+  for(const t of new Set(G.enemies.map(e=>e.type)))G.ecards[t]=pick(ETYPES[t].cards);
+  const order=[];
+  for(const h of liveHeroes())order.push({kind:'h',id:h.id,init:h.rest?99:deckOf(h)[h.sel[0]].i,tie:0});
+  for(const t in G.ecards)order.push({kind:'e',type:t,init:G.ecards[t].i,tie:1});
+  order.sort((a,b)=>a.init-b.init||a.tie-b.tie);
+  G.order=order;
+  for(G.oi=0;G.oi<order.length;G.oi++){
+    if(over())break;
+    const o=order[G.oi];renderOrder();
+    if(o.kind==='h'){const h=heroById(o.id);if(h&&alive(h))await heroTurn(h)}
+    else{
+      const list=G.enemies.filter(e=>e.type===o.type).sort((a,b)=>(b.elite-a.elite)||(a.id-b.id));
+      for(const e of list){if(over())break;if(alive(e))await enemyTurn(e,G.ecards[o.type])}
+    }
+  }
+  G.active=null;G.oi=99;
+  for(const u of[...G.heroes,...G.enemies])u.st.shield=0;
+  if(!liveHeroes().length)return gameOver();
+  if(!G.enemies.length)return floorClear();
+  startRound();
+}
+
+/* ============ hero turns ============ */
+async function startOfTurn(u){
+  if(u.st.poison){log(`${u.name} takes 1 poison damage.`,'dim');damage(u,1,null);await sleep(250)}
+}
+async function heroTurn(h){
+  G.active=h.id;renderAll();
+  await startOfTurn(h);if(!alive(h))return;
+  if(h.st.stun){h.st.stun=0;log(`${h.name} is stunned and loses the turn.`);finishCards(h,new Set());await sleep(500);return}
+  if(h.rest){longRest(h);renderAll();await sleep(600);h.st.immob=0;return}
+  if(h.human)await humanTurn(h);else await aiHeroTurn(h);
+  h.st.immob=0;renderAll();
+}
+function longRest(h){
+  const before=h.hp;h.hp=Math.min(maxHp(h),h.hp+2);h.st.poison=0;
+  let lostName='';
+  if(h.discard.length){const i=rnd(h.discard.length);const c=h.discard.splice(i,1)[0];h.lost.push(c);lostName=deckOf(h)[c].n}
+  h.hand.push(...h.discard);h.discard=[];h.used={};
+  floater(h,'+'+(h.hp-before),'#5cc98a');
+  log(`${h.name} takes a long rest: heals ${h.hp-before}, recovers cards, refreshes items${lostName?`, and permanently loses "${lostName}"`:''}.`);
+  ach('rest');
+}
+function finishCards(h,lostSet){
+  for(const ci of h.sel){const i=h.hand.indexOf(ci);if(i>=0)h.hand.splice(i,1);(lostSet.has(ci)?h.lost:h.discard).push(ci)}
+  h.sel=[];
+}
+async function humanTurn(h){
+  const T={h,used:{},top:null,bot:null,lost:new Set()};G.turn=T;
+  while(!over()&&alive(h)&&(T.top===null||T.bot===null)){
+    renderAll();
+    const ch=await new Promise(r=>G.turnResolve=r);G.turnResolve=null;
+    if(ch.type==='end')break;
+    if(ch.type==='item'){h.used[ch.id]=1;renderAll();await execSteps(h,ITEMS[ch.id].c);continue}
+    const card=deckOf(h)[ch.ci];
+    if(ch.half==='t')T.top=ch.ci;else T.bot=ch.ci;
+    T.used[ch.ci]=ch.half+(ch.basic?'*':'');
+    if(!ch.basic&&card.L===(ch.half==='t'?'T':'B'))T.lost.add(ch.ci);
+    renderAll();
+    await execSteps(h,ch.basic?(ch.half==='t'?[A(2)]:[M(2)]):(ch.half==='t'?card.t:card.b));
+  }
+  G.turn=null;finishCards(h,T.lost);
+}
+function choose(c){if(G.turnResolve&&!G.pick)G.turnResolve(c)}
+
+/* AI scoring */
+function nearestFoeDist(u){let d=99;for(const f of foesOf(u))d=Math.min(d,hdist(u,f));return d}
+function mostMissing(u,s){let m=0;for(const a of friendsOf(u)){if(!s.r&&a!==u)continue;if(s.r&&hdist(a,u)>s.r+3)continue;m=Math.max(m,maxHp(a)-a.hp)}return m}
+function scoreSteps(h,steps,lostHalf){
+  const nd=nearestFoeDist(h);let s=0;
+  for(const st of steps){switch(st.k){
+    case'atk':{const reach=(st.r||1)+3;s+=(st.v+(st.eff?st.eff.length*1.5:0)+(st.push?.5:0))*(st.tg||1)*(st.aoe?1.6:1)*(nd<=reach?1:.25);break}
+    case'mv':s+=st.v*(nd>2?.9:.35);break;
+    case'heal':{const need=st.all?liveHeroes().reduce((a,x)=>a+Math.min(st.v,maxHp(x)-x.hp),0):Math.min(st.v,mostMissing(h,st));s+=need*1.3+.2;break}
+    case'sh':s+=st.v*(nd<=3?1:.3)*(st.all?1.5:1);break;
+    case'str':s+=nd<=5?2:.5;break;
+    case'trap':s+=st.v*.4;break;
+  }}
+  if(lostHalf)s-=(G.enemies.some(e=>e.boss)||G.enemies.length>=5)?1.5:5;
+  return s;
+}
+function aiPlan(h){
+  if(h.hand.length<=2&&h.discard.length>=3){h.rest=true;return}
+  const D=deckOf(h);let best=null;
+  for(const a of h.hand)for(const b of h.hand){if(a===b)continue;
+    const sc=scoreSteps(h,D[a].t,D[a].L==='T')+scoreSteps(h,D[b].b,D[b].L==='B');
+    if(!best||sc>best.sc)best={sc,sel:[a,b]}}
+  h.sel=best.sel;
+}
+async function aiHeroTurn(h){
+  const D=deckOf(h);
+  if(h.hp<=maxHp(h)*.45)for(const id of h.items){const it=ITEMS[id];if(it.c&&!h.used[id]&&it.c[0].k==='heal'){h.used[id]=1;log(`${h.name} uses ${it.n}.`);await execSteps(h,it.c);break}}
+  if(h.hand.length-2<=1&&h.discard.length>=2)for(const id of h.items){const it=ITEMS[id];if(it.c&&!h.used[id]&&it.c[0].k==='recover'){h.used[id]=1;log(`${h.name} uses ${it.n}.`);await execSteps(h,it.c);break}}
+  const[a,b]=h.sel.map(i=>D[i]);
+  const o1=scoreSteps(h,a.t,a.L==='T')+scoreSteps(h,b.b,b.L==='B'),o2=scoreSteps(h,b.t,b.L==='T')+scoreSteps(h,a.b,a.L==='B');
+  const top=o1>=o2?a:b,bot=o1>=o2?b:a;
+  const lost=new Set();if(top.L==='T')lost.add(top.idx);if(bot.L==='B')lost.add(bot.idx);
+  let first=top.t,second=bot.b;
+  const fa=first.find(s=>s.k==='atk');
+  if(fa&&!first.some(s=>s.k==='mv')&&second.some(s=>s.k==='mv')){
+    const r=fa.r||1;if(!foesOf(h).some(f=>hdist(h,f)<=r+(fa.aoe||0)&&los(h,f)))[first,second]=[second,first];
+  }
+  log(`${h.name} plays ${top.n} (top) and ${bot.n} (bottom).`,'dim');
+  // offensive consumable if useful
+  for(const id of h.items){const it=ITEMS[id];if(it.c&&!h.used[id]&&it.c[0].k==='atk'){const s=it.c[0];if(foesOf(h).filter(f=>hdist(h,f)<=(s.r||1)&&los(h,f)).length&&(G.enemies.some(e=>e.boss||e.elite)||Math.random()<.3)){h.used[id]=1;log(`${h.name} uses ${it.n}.`);await execSteps(h,it.c)}}}
+  if(!over())await execSteps(h,first,second);
+  if(alive(h)&&!over())await execSteps(h,second);
+  finishCards(h,lost);
+}
+
+/* ============ step execution ============ */
+async function execSteps(u,steps,after=[]){
+  for(let i=0;i<steps.length;i++){
+    if(over()||!alive(u))return;
+    await execStep(u,steps[i],[...steps.slice(i+1),...after]);
+    renderAll();
+  }
+}
+function isAI(u){return u.side==='enemy'||!u.human}
+async function execStep(u,s,rest){
+  const ai=isAI(u);
+  switch(s.k){
+    case'mv':{
+      if(u.st.immob){log(`${u.name} is immobilized and can't move.`,'dim');return}
+      const mv=s.v+(u.side==='hero'?bonus(u).mv:0);
+      const reach=reachable(u,mv,s.j,ai);if(!reach.size)return;
+      let dest;
+      if(ai){const nx=rest.find(x=>x.k==='atk'||(x.k==='heal'&&x.r&&!x.all));dest=aiMoveDest(u,reach,nx?{kind:nx.k,range:nx.r||1,aoe:nx.aoe}:{kind:'atk',range:u.side==='hero'?CLASSES[u.cls].rng:1})}
+      else dest=await pickHex('move',reach,`Move ${mv}${s.j?' with Jump':''}: pick a highlighted hex`,'Skip move');
+      if(dest&&dest.path.length)await moveAlong(u,dest.path,s.j);
+      return;
+    }
+    case'atk':return doAttackStep(u,s,ai);
+    case'heal':{
+      const v=s.v+(u.side==='hero'?bonus(u).heal:0);
+      if(s.all){for(const a of friendsOf(u).filter(a=>hdist(a,u)<=s.r))heal(a,v);await sleep(300);return}
+      if(!s.r){heal(u,v);await sleep(250);return}
+      const valid=new Map();for(const a of friendsOf(u))if(hdist(a,u)<=s.r)valid.set(key(a.c,a.r),{c:a.c,r:a.r,u:a});
+      let ch;if(ai)ch=[...valid.values()].sort((a,b)=>(maxHp(b.u)-b.u.hp)-(maxHp(a.u)-a.u.hp))[0];
+      else ch=await pickHex('heal',valid,`Heal ${v}: pick an ally`,'Skip heal');
+      if(ch){heal(ch.u,v);await sleep(250)}return;
+    }
+    case'sh':{const list=s.all?friendsOf(u).filter(a=>hdist(a,u)<=s.r):[u];for(const a of list){a.st.shield+=s.v;floater(a,'⛨'+s.v,'#c9c3db')}log(`${u.name}: Shield ${s.v}${s.all?' to nearby allies':''}.`,'dim');await sleep(250);return}
+    case'str':{
+      if(s.all||!s.r){const list=s.all?friendsOf(u).filter(a=>hdist(a,u)<=s.r):[u];for(const a of list){a.st.str=1;floater(a,'STR','#f2a93b')}await sleep(250);return}
+      const valid=new Map();for(const a of friendsOf(u))if(hdist(a,u)<=s.r)valid.set(key(a.c,a.r),{c:a.c,r:a.r,u:a});
+      let ch;if(ai)ch=[...valid.values()].sort((a,b)=>nearestFoeDist(a.u)-nearestFoeDist(b.u))[0];
+      else ch=await pickHex('heal',valid,'Strengthen: pick an ally','Skip');
+      if(ch){ch.u.st.str=1;floater(ch.u,'STR','#f2a93b')}return;
+    }
+    case'trap':{
+      const valid=new Map();for(const t of G.tiles.values()){if(t.type!=='floor'||t.obst||t.trap||t.stairs||t.chest||unitAt(t.c,t.r))continue;if(hdist(t,u)<=(s.r||2))valid.set(key(t.c,t.r),{c:t.c,r:t.r})}
+      if(!valid.size)return;
+      let ch;if(ai)ch=[...valid.values()].sort((a,b)=>nearestFoeDist(a)-nearestFoeDist(b))[0];
+      else ch=await pickHex('place',valid,`Set a ${s.v}-damage trap: pick a hex`,'Skip');
+      if(ch){tile(ch.c,ch.r).trap={type:'hero',owner:'hero',dmg:s.v,eff:s.eff||[]};log(`${u.name} sets a hidden trap.`,'dim')}return;
+    }
+    case'recover':{const n=Math.min(s.v,u.discard.length);const got=u.discard.splice(u.discard.length-n,n);u.hand.push(...got);log(`${u.name} recovers ${n} card${n===1?'':'s'}.`,'dim');return}
+  }
+}
+function nearestFoeDistFrom(p,foes){let d=99;for(const f of foes)d=Math.min(d,hdist(p,f));return d}
+async function doAttackStep(u,s,ai){
+  const range=s.r||1,ranged=!!s.r;
+  if(s.aoe){
+    const centers=new Map();
+    for(const t of G.tiles.values()){if(t.type==='wall'||hdist(u,t)>range||!los(u,t))continue;const hit=foesOf(u).filter(f=>hdist(f,t)<=s.aoe);if(hit.length)centers.set(key(t.c,t.r),{c:t.c,r:t.r,hit})}
+    if(!centers.size){note(u,'No targets in range');return}
+    let ch;if(ai)ch=[...centers.values()].sort((a,b)=>b.hit.length-a.hit.length)[0];
+    else ch=await pickHex('aoe',centers,`Blast (Attack ${s.v}): pick the center hex`,'Skip attack');
+    if(!ch)return;
+    for(const f of ch.hit)if(alive(f))await resolveAttack(u,f,s,ranged);
+    return;
+  }
+  const n=s.tg||1,hit=new Set();
+  for(let k=0;k<n;k++){
+    if(over()||!alive(u))return;
+    const valid=new Map();for(const f of foesOf(u))if(!hit.has(f)&&hdist(u,f)<=range&&los(u,f))valid.set(key(f.c,f.r),{c:f.c,r:f.r,u:f});
+    if(!valid.size){if(k===0)note(u,'No targets in range');return}
+    let ch;
+    if(ai){const arr=[...valid.values()];const foc=arr.find(x=>x.u.id===u.focus);ch=foc||arr.sort((a,b)=>(a.u.hp-b.u.hp)||(hdist(u,a)-hdist(u,b)))[0]}
+    else ch=await pickHex('atk',valid,`Attack ${s.v}${n>1?`, target ${k+1} of ${n}`:''}: pick an enemy`,k?'Done':'Skip attack');
+    if(!ch)return;hit.add(ch.u);await resolveAttack(u,ch.u,s,ranged);
+  }
+}
+function note(u,t){if(u.side==='enemy')return;if(!isAI(u))toast(t);log(`${u.name}: ${t.toLowerCase()}.`,'dim')}
+async function resolveAttack(att,tgt,s,ranged){
+  let v=s.v;
+  if(att.side==='hero'){const b=bonus(att);v+=ranged?b.rng:b.atk;if(CLASSES[att.cls].flank&&liveHeroes().some(h=>h!==att&&hdist(h,tgt)===1))v+=2}
+  if(att.st.str){v+=att.side==='hero'?2:1;att.st.str=0}
+  const m=pick(MODS);let txt;
+  if(m==='miss'){v=0;txt='MISS'}else if(m==='x2'){v*=2;txt='×2'}else{v+=m;txt=m>0?'+'+m:m<0?String(m):'+0'}
+  const sh=shieldOf(tgt),dmg=Math.max(0,v-sh),before=tgt.hp;
+  att._lunge={x:tgt.c,y:tgt.r,t:performance.now()};
+  log(`${att.name} → ${tgt.name}: ${s.v} ${txt}${sh?`, shield ${sh}`:''} = ${dmg} dmg`);
+  damage(tgt,dmg,att,txt==='MISS'?'MISS':null);
+  if(att.side==='hero'&&!alive(tgt)&&dmg>=before+3)ach('overkill');
+  if(alive(tgt)&&m!=='miss'){
+    for(const e of s.eff||[]){if(e==='stun'){tgt.st.stun=1;if(att.side==='hero')ach('stunner')}if(e==='immob')tgt.st.immob=1;if(e==='poison')tgt.st.poison=1;floater(tgt,EFF[e],'#e6c34a',18)}
+    if(s.push)await push(att,tgt,s.push);
+  }
+  renderAll();await sleep(isAI(att)?Math.max(200,SPEED*.8):260);
+}
+function damage(u,dmg,src,label){
+  if(label==='MISS'){floater(u,'MISS','#a69dba');return}
+  if(dmg<=0){floater(u,'0','#a69dba');return}
+  u.hp-=dmg;floater(u,'-'+dmg,'#ff6b5f');u._hit=performance.now();
+  if(u.hp<=0)kill(u,src);
+}
+function heal(u,v){const amt=Math.min(v,maxHp(u)-u.hp);u.hp+=amt;const cured=u.st.poison;u.st.poison=0;floater(u,'+'+amt+(cured?' cured':''),'#5cc98a')}
+function kill(u,src){
+  if(u.side==='enemy'){
+    G.enemies=G.enemies.filter(e=>e!==u);G.kills++;if(src&&src.side==='hero')src.kills++;
+    G.viewers+=Math.round((300+rnd(700))*G.floor*(u.boss?8:u.elite?2:1));
+    log(`${u.name} is dead.${src&&src.side==='hero'?` Credit: ${src.name}.`:''}`);
+    if(G.kills===1)ach('firstblood');
+    if(u.boss){ach('bossdown');sys(`${u.name} has been defeated. The sponsors are thrilled. The sponsors are always thrilled.`)}
+    G.deaths.push({x:u._x,y:u._y,t:performance.now(),col:ETYPES[u.type].col});
+  }else{
+    u.hp=0;u.down=true;G.deaths.push({x:u._x,y:u._y,t:performance.now(),col:CLASSES[u.cls].col});u.c=-99;u.r=-99;
+    G.viewers+=20000+rnd(15000);
+    sys(`${u.name} is down. They have been placed in a commemorative bin and will be revived if the party clears the floor, minus some dignity.`);
+    ach('down');
+  }
+}
+async function push(att,tgt,n){
+  for(let i=0;i<n;i++){
+    const d0=hdist(att,tgt);
+    const opts=neighbors(tgt.c,tgt.r).filter(h=>{const t=tile(h.c,h.r);return t&&t.type==='floor'&&!t.obst&&!unitAt(h.c,h.r)&&hdist(att,h)>d0});
+    if(!opts.length)break;const h=pick(opts);tgt.c=h.c;tgt.r=h.r;await sleep(120);
+    await checkTrap(tgt);if(!alive(tgt))break;
+  }
+}
+function trapHits(u,tr){if(u.fly)return false;if(tr.owner==='hero')return u.side==='enemy';return true}
+async function checkTrap(u){
+  const t=tile(u.c,u.r);if(!t||!t.trap||!trapHits(u,t.trap))return;
+  const tr=t.trap;t.trap=null;
+  const nm=tr.owner==='hero'?'a hidden crawler trap':TRAPS[tr.type].n;
+  log(`${u.name} triggers ${nm}!`);
+  damage(u,tr.dmg,null);
+  if(alive(u))for(const e of tr.eff){if(e==='stun')u.st.stun=1;if(e==='immob')u.st.immob=1;if(e==='poison')u.st.poison=1;floater(u,EFF[e],'#e6c34a',18)}
+  if(u.side==='hero')ach('trapped');
+  renderAll();await sleep(350);
+}
+async function moveAlong(u,path,jump){
+  for(let i=0;i<path.length;i++){
+    const p=path[i];u.c=p.c;u.r=p.r;renderAll();await sleep(isAI(u)?Math.max(70,SPEED*.25):110);
+    if(!jump||i===path.length-1){await checkTrap(u);if(!alive(u))return}
+  }
+  const t=tile(u.c,u.r);
+  if(u.side==='hero'&&t.chest){t.chest=false;const pool=Object.keys(ITEMS).filter(k=>!u.items.includes(k));const it=pick(pool.length?pool:Object.keys(ITEMS));u.items.push(it);if(ITEMS[it].p&&ITEMS[it].p.hp)u.hp+=ITEMS[it].p.hp;log(`${u.name} opens a chest: ${ITEMS[it].n}. ${ITEMS[it].s}`);ach('looted');floater(u,ITEMS[it].n,'#f2a93b',16)}
+}
+
+/* ============ movement & AI pathing ============ */
+function avoidTile(u,t){if(!t.trap||u.fly)return false;if(t.trap.owner==='hero')return false;return true}
+function reachable(u,mv,jump,avoid){
+  const res=new Map(),seen=new Map([[key(u.c,u.r),0]]),q=[{c:u.c,r:u.r,d:0,path:[]}];
+  while(q.length){
+    const cur=q.shift();if(cur.d>=mv)continue;
+    for(const nb of neighbors(cur.c,cur.r)){
+      const k=key(nb.c,nb.r),t=G.tiles.get(k);if(!t||t.type==='wall')continue;
+      if(seen.has(k))continue;
+      const occ=unitAt(nb.c,nb.r);
+      if(!jump){if(t.obst)continue;if(occ&&occ.side!==u.side)continue;if(avoid&&avoidTile(u,t))continue}
+      seen.set(k,cur.d+1);const path=[...cur.path,{c:nb.c,r:nb.r}];
+      q.push({c:nb.c,r:nb.r,d:cur.d+1,path});
+      if(!occ&&!t.obst&&!(jump&&avoid&&avoidTile(u,t)))res.set(k,{c:nb.c,r:nb.r,path});
+    }
+  }
+  return res;
+}
+function approach(u,targets,range,avoid){
+  const all=reachable(u,80,false,avoid);all.set(key(u.c,u.r),{c:u.c,r:u.r,path:[]});
+  let best=null;
+  for(const h of all.values()){const cost=h.path.length;
+    for(const f of targets){if(hdist(h,f)<=range&&los(h,f)){if(!best||cost<best.cost||(cost===best.cost&&f.hp<best.f.hp))best={h,f,cost}}}}
+  return best;
+}
+function aiMoveDest(u,reach,ctx){
+  const foes=foesOf(u);
+  let targets=foes,range=ctx.range||1;
+  if(ctx.kind==='heal'){const hurt=friendsOf(u).filter(a=>a!==u&&a.hp<maxHp(a));if(hurt.length)targets=hurt}
+  if(!targets.length)return null;
+  const here={c:u.c,r:u.r,path:[]};
+  const opts=[here,...reach.values()];
+  const eff=range+(ctx.aoe||0);
+  const inR=opts.filter(o=>targets.some(t=>hdist(o,t)<=eff&&los(o,t)));
+  if(inR.length){
+    if(range>1&&ctx.kind!=='heal')inR.sort((a,b)=>(nearestFoeDistFrom(b,foes)-nearestFoeDistFrom(a,foes))||(a.path.length-b.path.length));
+    else inR.sort((a,b)=>a.path.length-b.path.length);
+    return inR[0];
+  }
+  const best=approach(u,targets,range,true)||approach(u,targets,range,false);
+  if(best){const p=best.h.path;for(let k=Math.min(p.length,99);k>=1;k--){const s=reach.get(key(p[k-1].c,p[k-1].r));if(s)return s}}
+  let bd=nearestFoeDistFrom(here,targets),bo=null;
+  for(const o of reach.values()){const d=nearestFoeDistFrom(o,targets);if(d<bd){bd=d;bo=o}}
+  return bo;
+}
+
+/* ============ enemy turns ============ */
+async function enemyTurn(e,card){
+  G.active=e.id;renderAll();await sleep(Math.max(120,SPEED*.5));
+  await startOfTurn(e);if(!alive(e))return;
+  if(e.st.stun){e.st.stun=0;log(`${e.name} is stunned.`,'dim');await sleep(300);return}
+  if(card.sh){e.st.shield+=card.sh;floater(e,'⛨'+card.sh,'#c9c3db')}
+  if(card.heal){for(const a of G.enemies.filter(a=>hdist(a,e)<=2))heal(a,card.heal);await sleep(250)}
+  if(card.str){for(const a of G.enemies.filter(a=>a!==e&&hdist(a,e)<=3)){a.st.str=1;floater(a,'STR','#f2a93b')}log(`${e.name} schedules some synergy. Nearby monsters are strengthened.`,'dim')}
+  if(card.summon&&G.enemies.length<12){const spot=neighbors(e.c,e.r).find(h=>{const t=tile(h.c,h.r);return t&&t.type==='floor'&&!t.obst&&!t.trap&&!unitAt(h.c,h.r)});if(spot){const s=addEnemy(card.summon,0,spot.c,spot.r,G.floor);s._x=null;log(`${e.name} summons a ${s.name}.`)}}
+  const foes=liveHeroes();if(!foes.length)return;
+  const range=e.rng||1,mv=e.st.immob?0:Math.max(0,e.mv+(card.mv||0));
+  const best=approach(e,foes,range,!e.fly)||approach(e,foes,range,false);
+  if(best){
+    e.focus=best.f.id;
+    if(mv>0){
+      let dest=null;const p=best.h.path;
+      for(let k=Math.min(p.length,mv);k>=1;k--){const t=p[k-1];if(!unitAt(t.c,t.r)){dest=p.slice(0,k);break}}
+      if(dest)await moveAlong(e,dest,false);
+    }
+  }else if(mv>0){
+    const reach=reachable(e,mv,false,!e.fly);let bd=nearestFoeDist(e),bo=null;
+    for(const o of reach.values()){const d=nearestFoeDistFrom(o,foes);if(d<bd){bd=d;bo=o}}
+    if(bo)await moveAlong(e,bo.path,false);
+  }
+  if(!alive(e))return;
+  const av=Math.max(0,e.atk+(card.atk||0));
+  await doAttackStep(e,{k:'atk',v:av,r:e.rng||0,tg:card.tg||e.tg||1,eff:card.eff,push:card.push},true);
+  e.st.immob=0;
+}
+
+/* ============ floor end / game over ============ */
+function floorClear(){
+  G.phase='loot';G.active=null;
+  for(const t of G.tiles.values())if(t.trap&&t.trap.owner==='hero')t.trap=null;
+  G.viewers+=8000*G.floor;
+  sys(`Floor ${G.floor} cleared. Loot boxes inbound. Remember: every box is a gift, and every gift is a liability.`);
+  renderAll();
+  const offers={};const choice={};
+  for(const h of G.heroes){const pool=shuffle(Object.keys(ITEMS).filter(k=>!h.items.includes(k)));offers[h.id]=pool.slice(0,3);if(!h.human)choice[h.id]=offers[h.id][0]}
+  const draw=()=>{
+    const ready=G.heroes.every(h=>choice[h.id]||!offers[h.id].length);
+    openModal(`<div class="k">System notice · Floor ${G.floor} complete</div><h3>Bronze Loot Boxes</h3>
+      <div class="say">${esc(pick(["Congratulations on not dying. Each crawler may take one item from their box. The rest will be donated to the monsters.","Loot time. Choose wisely, or quickly. The System cannot tell the difference.","Every crawler levels up (+1 max HP) and gets one item. Downed crawlers have been revived out of a contractual obligation."]))}</div>
+      <div class="loot">${G.heroes.map(h=>`<div class="lrow"><div class="hn"><span>${esc(h.name)} <small>${CLASSES[h.cls].name}${h.human?'':' · CPU'}</small></span><small>Lv ${h.lvl+2}</small></div>
+        <div class="opts">${offers[h.id].map(it=>`<button class="opt ${choice[h.id]===it?'on':''}" data-h="${h.id}" data-it="${it}" ${h.human?'':'disabled'}><b>${esc(ITEMS[it].n)}</b>${esc(ITEMS[it].d)}<br><small>${esc(ITEMS[it].s)}</small></button>`).join('')}</div></div>`).join('')}</div>
+      <div class="row"><button class="btn big" id="btnDescend" ${ready?'':'disabled'}>Descend to Floor ${G.floor+1}</button><span class="note">${ready?'':'Pick an item for each player crawler.'}</span></div>`);
+    document.querySelectorAll('.opt[data-h]').forEach(b=>b.onclick=()=>{choice[b.dataset.h]=b.dataset.it;draw()});
+    $('#btnDescend').onclick=()=>{for(const h of G.heroes){if(choice[h.id])h.items.push(choice[h.id]);h.lvl++}closeModal();G.viewers+=2000;nextFloor()};
+  };
+  draw();
+}
+function gameOver(){
+  G.phase='over';G.active=null;renderAll();
+  try{localStorage.removeItem(SAVE_KEY)}catch(e){}
+  const best=[...G.heroes].sort((a,b)=>b.kills-a.kills)[0];
+  openModal(`<div class="k">System notice · Broadcast ended</div><h3>Your party has been eliminated</h3>
+    <div class="facts"><span>Floor reached <b>${G.floor}</b></span><span>Kills <b>${G.kills}</b></span><span>Peak viewers <b>${fmtV(G.viewers)}</b></span><span>MVP <b>${esc(best.name)}</b> (${best.kills})</span></div>
+    <div class="say" id="say"></div>
+    <div class="row"><button class="btn big" id="btnAgain">New crawl</button></div>`);
+  type($('#say'),`The show will continue without you. The show always continues. Your highlight reel has been sold to ${pick(['a mattress company','a lizard-based dating app','an energy drink that is legally a solvent','three separate cults'])}. Thank you for your service.`);
+  $('#btnAgain').onclick=()=>{closeModal();showParty()};
+}
+
+/* ============ save / load ============ */
+function save(){try{const s={...G,tiles:[...G.tiles.values()],pick:null,turn:null,turnResolve:null,deaths:[]};localStorage.setItem(SAVE_KEY,JSON.stringify(s))}catch(e){}}
+function loadSave(){try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;const s=JSON.parse(raw);s.tiles=new Map(s.tiles.map(t=>[key(t.c,t.r),t]));return s}catch(e){return null}}
+
+/* ============ rendering: canvas ============ */
+const cv=$('#cv'),cx=cv.getContext('2d');
+const L={size:30,ox:0,oy:0,dpr:1,w:0,h:0};
+let hover=null;
+const floaters=[];
+function layout(){
+  const box=$('#board');const w=box.clientWidth,h=box.clientHeight;L.w=w;L.h=h;
+  L.dpr=Math.min(2,window.devicePixelRatio||1);cv.width=Math.round(w*L.dpr);cv.height=Math.round(h*L.dpr);cv.style.width=w+'px';cv.style.height=h+'px';
+  if(!G||!G.W)return;
+  const pad=8,top=46;
+  const size=Math.max(8,Math.min((w-pad*2)/(SQ3*(G.W+0.5)),(h-top-pad)/(1.5*G.H+0.5)));
+  L.size=size;const bw=SQ3*size*(G.W+0.5),bh=size*(1.5*G.H+0.5);
+  L.ox=(w-bw)/2+SQ3*size/2;L.oy=top+(h-top-pad-bh)/2+size;
+  for(const u of allUnits())u._x=null;
+}
+function center(c,r){return{x:L.ox+SQ3*L.size*(c+0.5*(r&1)),y:L.oy+1.5*L.size*r}}
+function hexPath(x,y,s){cx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-30);const px=x+s*Math.cos(a),py=y+s*Math.sin(a);i?cx.lineTo(px,py):cx.moveTo(px,py)}cx.closePath()}
+function floater(u,text,col,fs=22){const x=u._x!=null?u._x:center(u.c,u.r).x,y=u._y!=null?u._y:center(u.c,u.r).y;floaters.push({x,y,text,col,t:performance.now(),fs})}
+function hexAt(px,py){if(!G||!G.tiles.size)return null;let best=null,bd=1e9;for(const t of G.tiles.values()){const p=center(t.c,t.r);const d=(p.x-px)**2+(p.y-py)**2;if(d<bd){bd=d;best=t}}return bd<(L.size*L.size)?best:null}
+const PICK_COL={move:'242,169,59',atk:'226,82,74',aoe:'226,82,74',heal:'92,201,138',place:'229,112,58'};
+function draw(now){
+  cx.setTransform(L.dpr,0,0,L.dpr,0,0);cx.clearRect(0,0,L.w,L.h);
+  if(!G||!G.tiles.size)return;
+  const th=THEMES[G.theme],s=L.size;
+  const isFloor=t=>t&&t.type==='floor';
+  // walls
+  for(const t of G.tiles.values()){if(t.type!=='wall')continue;if(!neighbors(t.c,t.r).some(h=>isFloor(tile(h.c,h.r))))continue;const p=center(t.c,t.r);hexPath(p.x,p.y,s*1.0);cx.fillStyle=th.wall;cx.fill();hexPath(p.x,p.y-s*.12,s*.86);cx.fillStyle=th.rim+'33';cx.fill()}
+  // floors
+  for(const t of G.tiles.values()){if(t.type!=='floor')continue;const p=center(t.c,t.r);hexPath(p.x,p.y,s*.97);cx.fillStyle=th.fl[Math.floor(t.v*3)];cx.fill();cx.strokeStyle='#00000055';cx.lineWidth=1;cx.stroke()}
+  // stairs
+  for(const t of G.tiles.values()){if(!t.stairs)continue;const p=center(t.c,t.r);const lit=!G.enemies.length;for(let i=0;i<4;i++){hexPath(p.x,p.y+i*s*.06,s*(.8-i*.17));cx.fillStyle=lit?`rgba(242,169,59,${.25+i*.18})`:`rgba(0,0,0,${.25+i*.12})`;cx.fill()}}
+  // obstacles
+  for(const t of G.tiles.values()){if(!t.obst)continue;const p=center(t.c,t.r);cx.fillStyle='#5b4b40';cx.beginPath();for(let i=0;i<7;i++){const a=i/7*Math.PI*2+t.v*3,rr=s*(.42+.14*Math.sin(i*2.3+t.v*9));const x=p.x+Math.cos(a)*rr,y=p.y+Math.sin(a)*rr*.85;i?cx.lineTo(x,y):cx.moveTo(x,y)}cx.closePath();cx.fill();cx.fillStyle='#7a6656';cx.beginPath();cx.ellipse(p.x-s*.1,p.y-s*.12,s*.18,s*.12,0,0,Math.PI*2);cx.fill()}
+  // traps & chests
+  for(const t of G.tiles.values()){
+    const p=center(t.c,t.r);
+    if(t.trap){
+      const hero=t.trap.owner==='hero';const col=hero?'#f2a93b':TRAPS[t.trap.type].col;
+      cx.save();cx.translate(p.x,p.y);
+      if(hero){cx.setLineDash([4,3]);cx.strokeStyle=col;cx.lineWidth=2;cx.beginPath();cx.arc(0,0,s*.45,0,Math.PI*2);cx.stroke();cx.setLineDash([])}
+      cx.fillStyle=col+'33';hexPath(0,0,s*.6);cx.fill();
+      cx.strokeStyle=col;cx.lineWidth=Math.max(1.5,s*.07);cx.beginPath();
+      const ty=t.trap.type;
+      if(ty==='spike'||ty==='hero'){for(let i=-1;i<=1;i++){cx.moveTo(i*s*.22-s*.1,s*.15);cx.lineTo(i*s*.22,-s*.2);cx.lineTo(i*s*.22+s*.1,s*.15)}}
+      else if(ty==='shock'){cx.moveTo(-s*.08,-s*.28);cx.lineTo(s*.12,-s*.02);cx.lineTo(-s*.08,s*.02);cx.lineTo(s*.1,s*.28)}
+      else if(ty==='glue'){cx.arc(0,0,s*.24,0,Math.PI*2);cx.moveTo(s*.1,0);cx.arc(0,0,s*.1,0,Math.PI*2)}
+      else if(ty==='bear'){cx.arc(0,s*.05,s*.26,Math.PI,0);for(let i=-2;i<=2;i++){cx.moveTo(i*s*.1,s*.05);cx.lineTo(i*s*.1,-s*.08)}cx.moveTo(-s*.26,s*.05);cx.lineTo(s*.26,s*.05)}
+      else if(ty==='vent'){for(let i=-1;i<=1;i++){cx.moveTo(i*s*.18,s*.22);cx.quadraticCurveTo(i*s*.18+s*.1,0,i*s*.18,-s*.22)}}
+      cx.stroke();cx.restore();
+    }
+    if(t.chest){cx.fillStyle='#8a5a2b';cx.fillRect(p.x-s*.32,p.y-s*.18,s*.64,s*.4);cx.fillStyle='#d9a441';cx.fillRect(p.x-s*.32,p.y-s*.22,s*.64,s*.12);cx.fillRect(p.x-s*.05,p.y-s*.06,s*.1,s*.14)}
+  }
+  // pick highlights
+  const pulse=.5+.5*Math.sin(now/260);
+  if(G.pick){
+    const col=PICK_COL[G.pick.kind];
+    for(const v of G.pick.valid.values()){const p=center(v.c,v.r);hexPath(p.x,p.y,s*.92);cx.fillStyle=`rgba(${col},${.18+.14*pulse})`;cx.fill();cx.strokeStyle=`rgba(${col},.9)`;cx.lineWidth=1.5;cx.stroke()}
+    if(G.pick.kind==='aoe'&&hover&&G.pick.valid.has(key(hover.c,hover.r))){for(const t of G.tiles.values()){if(t.type!=='floor'||hdist(t,hover)>1)continue;const p=center(t.c,t.r);hexPath(p.x,p.y,s*.7);cx.fillStyle='rgba(226,82,74,.35)';cx.fill()}}
+    if(G.pick.kind==='move'&&hover){const v=G.pick.valid.get(key(hover.c,hover.r));if(v&&v.path){const u=unitById(G.active);if(u){cx.strokeStyle='rgba(242,169,59,.85)';cx.lineWidth=3;cx.setLineDash([6,5]);cx.beginPath();const a=center(u.c,u.r);cx.moveTo(a.x,a.y);for(const q of v.path){const b=center(q.c,q.r);cx.lineTo(b.x,b.y)}cx.stroke();cx.setLineDash([])}}}
+  }
+  if(hover){const p=center(hover.c,hover.r);hexPath(p.x,p.y,s*.97);cx.strokeStyle='rgba(255,255,255,.55)';cx.lineWidth=2;cx.stroke()}
+  // death puffs
+  G.deaths=G.deaths||[];
+  for(const d of G.deaths){const k=(now-d.t)/600;if(k>1||d.x==null)continue;cx.strokeStyle=d.col;cx.globalAlpha=1-k;cx.lineWidth=3;cx.beginPath();cx.arc(d.x,d.y,s*(.5+k*.8),0,Math.PI*2);cx.stroke();cx.globalAlpha=1}
+  G.deaths=G.deaths.filter(d=>now-d.t<700);
+  // units
+  for(const u of allUnits()){
+    const tp=center(u.c,u.r);if(u._x==null){u._x=tp.x;u._y=tp.y}
+    const k=RM?1:.28;u._x+=(tp.x-u._x)*k;u._y+=(tp.y-u._y)*k;
+    let x=u._x,y=u._y;
+    if(u._lunge){const a=(now-u._lunge.t)/260;if(a<1){const tg=center(u._lunge.x,u._lunge.y);const m=Math.sin(a*Math.PI)*.22;x+=(tg.x-x)*m;y+=(tg.y-y)*m}else u._lunge=null}
+    if(u._hit&&now-u._hit<300){x+=Math.sin((now-u._hit)/20)*3}
+    const rad=s*(u.boss?.74:.6);
+    if(G.active===u.id){cx.strokeStyle=`rgba(242,169,59,${.6+.4*pulse})`;cx.lineWidth=3;cx.beginPath();cx.arc(x,y,rad+5+2*pulse,0,Math.PI*2);cx.stroke()}
+    cx.fillStyle='#0006';cx.beginPath();cx.ellipse(x,y+rad*.85,rad*.9,rad*.3,0,0,Math.PI*2);cx.fill();
+    if(u.side==='hero'){
+      cx.fillStyle=CLASSES[u.cls].col;cx.beginPath();cx.arc(x,y,rad,0,Math.PI*2);cx.fill();cx.strokeStyle='#fff';cx.lineWidth=Math.max(2,s*.08);cx.stroke();
+      if(!u.human){cx.fillStyle='#15111d';cx.font=`600 ${Math.max(8,s*.24)}px JetBrains Mono, monospace`;cx.textAlign='center';cx.fillText('CPU',x,y+rad+s*.05+Math.max(8,s*.24))}
+    }else{
+      const T=ETYPES[u.type];cx.save();cx.translate(x,y);cx.rotate(Math.PI/4);const sq=rad*1.45;
+      cx.fillStyle=T.col;cx.beginPath();cx.roundRect?cx.roundRect(-sq/2,-sq/2,sq,sq,sq*.22):cx.rect(-sq/2,-sq/2,sq,sq);cx.fill();
+      cx.strokeStyle=u.boss?'#ff6aa8':u.elite?'#f2c14a':'#120e18';cx.lineWidth=u.boss||u.elite?Math.max(2.5,s*.1):2;cx.stroke();cx.restore();
+    }
+    cx.fillStyle=u.side==='hero'?'#fff':'#15111d';cx.font=`${Math.max(8,s*(u.boss?.42:.36))}px Bungee, Impact, sans-serif`;cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillText(u.side==='hero'?CLASSES[u.cls].g:ETYPES[u.type].g,x,y+1);cx.textBaseline='alphabetic';
+    // hp bar
+    const bw=s*1.1,bh=Math.max(3,s*.12),by=y-rad-bh-4;
+    cx.fillStyle='#000a';cx.fillRect(x-bw/2,by,bw,bh);cx.fillStyle=u.side==='hero'?'#5cc98a':'#e2524a';cx.fillRect(x-bw/2,by,bw*Math.max(0,u.hp)/maxHp(u),bh);
+    // status pips
+    const pips=[];if(shieldOf(u))pips.push(['#b9b2cc','⛨'+shieldOf(u)]);if(u.st.stun)pips.push(['#e6c34a','S']);if(u.st.immob)pips.push(['#6aa0e0','I']);if(u.st.poison)pips.push(['#7cc46a','P']);if(u.st.str)pips.push(['#f2a93b','+']);
+    cx.font=`600 ${Math.max(8,s*.26)}px JetBrains Mono, monospace`;
+    pips.forEach((p,i)=>{const px=x+rad*.8,py=y-rad*.4+i*s*.32;const w=cx.measureText(p[1]).width+6;cx.fillStyle=p[0];cx.fillRect(px,py-s*.15,w,s*.3);cx.fillStyle='#15111d';cx.textAlign='left';cx.fillText(p[1],px+3,py+s*.09)});
+    cx.textAlign='center';
+  }
+  // floaters
+  for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];const a=(now-f.t)/1100;if(a>1){floaters.splice(i,1);continue}
+    cx.globalAlpha=1-a*a;cx.font=`${Math.max(10,f.fs*(s/30))}px Bungee, Impact, sans-serif`;cx.textAlign='center';cx.lineWidth=4;cx.strokeStyle='#0b0810';const y=f.y-s*.8-a*s*1.2;cx.strokeText(f.text,f.x,y);cx.fillStyle=f.col;cx.fillText(f.text,f.x,y);cx.globalAlpha=1}
+}
+function loop(now){draw(now);requestAnimationFrame(loop)}
+
+/* ============ input ============ */
+function pickHex(kind,valid,prompt,skipLabel){
+  return new Promise(res=>{
+    G.pick={kind,valid,resolve:v=>{G.pick=null;$('#prompt').hidden=true;renderAll();res(v)}};
+    $('#promptT').textContent=prompt;$('#promptB').textContent=skipLabel||'Skip';$('#prompt').hidden=false;renderAll();
+  });
+}
+$('#promptB').onclick=()=>{if(G&&G.pick)G.pick.resolve(null)};
+function evtPos(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+cv.addEventListener('pointermove',e=>{if(!G)return;const p=evtPos(e);hover=hexAt(p.x,p.y);updateTip(p)});
+cv.addEventListener('pointerleave',()=>{hover=null;$('#tip').hidden=true});
+cv.addEventListener('click',e=>{
+  if(!G)return;const p=evtPos(e);const t=hexAt(p.x,p.y);if(!t)return;
+  if(G.pick){const v=G.pick.valid.get(key(t.c,t.r));if(v){G.pick.resolve(v);return}}
+  const u=unitAt(t.c,t.r);
+  if(u)return inspectUnit(u);
+  if(t.trap)return inspectTrap(t);
+  if(t.chest)return inspectSay('Treasure chest','Loot',"A treasure chest. End a move on it to open it. The System guarantees it is not a mimic, which is exactly what a mimic would want the System to say.");
+  if(t.stairs)return inspectSay('Stairwell','Exit',G.enemies.length?"The stairs down. They unlock when every monster on this floor is dead. The stairs are very patient. The stairs have seen a lot of crawlers.":"The stairs are open. Descend from the loot screen. Downward is the only direction the show goes.");
+  if(t.obst)return inspectSay('Rubble','Obstacle',"Rubble. Blocks movement, does not block line of sight. Formerly a load-bearing wall, which explains the ceiling.");
+});
+function updateTip(p){
+  const tip=$('#tip');if(!hover){tip.hidden=true;return}
+  const u=unitAt(hover.c,hover.r);let html='';
+  if(u)html=`<b>${esc(u.name)}</b> <small>${u.hp}/${maxHp(u)} HP${shieldOf(u)?' · ⛨'+shieldOf(u):''}</small>`;
+  else if(hover.trap)html=`<b>${hover.trap.owner==='hero'?'Crawler trap':esc(TRAPS[hover.trap.type].n)}</b> <small>${hover.trap.dmg} dmg</small>`;
+  else if(hover.chest)html='<b>Treasure chest</b>';
+  if(!html){tip.hidden=true;return}
+  tip.innerHTML=html+' <small>· click for System notes</small>';tip.hidden=false;
+  const w=tip.offsetWidth;tip.style.left=Math.max(4,Math.min(L.w-w-4,p.x+14))+'px';tip.style.top=Math.max(4,p.y-36)+'px';
+}
+
+/* ============ modal & inspect ============ */
+let typeTimer;
+function openModal(html){const m=$('#modal');m.innerHTML=`<div class="dlg" role="dialog" aria-modal="true">${html}</div>`;m.hidden=false}
+function closeModal(){clearInterval(typeTimer);$('#modal').hidden=true;$('#modal').innerHTML=''}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal'&&!$('#modal').querySelector('#btnDescend,#btnAgain'))closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').hidden&&!$('#modal').querySelector('#btnDescend,#btnAgain'))closeModal()});
+function type(el,text){clearInterval(typeTimer);if(RM){el.textContent=text;return}let i=0;el.textContent='';typeTimer=setInterval(()=>{i+=2;el.textContent=text.slice(0,i);if(i>=text.length)clearInterval(typeTimer)},16)}
+function inspectSay(title,kind,text,facts=''){
+  openModal(`<div class="k">System notes · ${esc(kind)}</div><h3>${esc(title)}</h3>${facts?`<div class="facts">${facts}</div>`:''}<div class="say" id="say"></div><div class="row"><button class="btn ghost" id="mClose">Close</button></div>`);
+  type($('#say'),text);$('#mClose').onclick=closeModal;
+}
+function inspectUnit(u){
+  if(u.side==='enemy'){
+    const T=ETYPES[u.type],c=G.ecards[u.type];
+    const facts=`<span>HP <b>${u.hp}/${u.maxHp}</b></span><span>Move <b>${u.mv}</b></span><span>Attack <b>${u.atk}</b></span><span>Range <b>${u.rng||'melee'}</b></span>${u.sh?`<span>Shield <b>${u.sh}</b></span>`:''}${u.tg>1?`<span>Targets <b>${u.tg}</b></span>`:''}${u.fly?'<span><b>Flying</b></span>':''}${c?`<span>This round <b>${esc(c.n)}</b> (${c.i})</span>`:''}`;
+    const extra=u.elite?" This one is an Elite: more HP, more damage, same lack of dental coverage.":"";
+    inspectSay(u.name,u.boss?'Floor boss':u.elite?'Elite monster':'Monster',u.snark+extra,facts);
+  }else{
+    const C=CLASSES[u.cls],D=C.deck;
+    const facts=`<span>HP <b>${u.hp}/${maxHp(u)}</b></span><span>Hand <b>${u.hand.length}</b></span><span>Discard <b>${u.discard.length}</b></span><span>Lost <b>${u.lost.length}</b></span><span>Kills <b>${u.kills}</b></span>`;
+    inspectSay(`${u.name} the ${C.name}`,u.human?'Crawler · player':'Crawler · CPU',C.snark+` Gear: ${u.items.map(i=>ITEMS[i].n).join(', ')}.`,facts);
+  }
+}
+function inspectTrap(t){
+  if(t.trap.owner==='hero')return inspectSay('Crawler trap','Trap',HERO_TRAP_SNARK,`<span>Damage <b>${t.trap.dmg}</b></span>${t.trap.eff.map(e=>`<span><b>${EFF[e]}</b></span>`).join('')}`);
+  const T=TRAPS[t.trap.type];
+  inspectSay(T.n,'Trap',pick(T.s)+' Monsters walk around traps. You can push them in.',`<span>Damage <b>${t.trap.dmg}</b></span>${t.trap.eff.map(e=>`<span><b>${EFF[e]}</b></span>`).join('')}<span>Single use</span>`);
+}
+
+/* ============ rendering: side panel ============ */
+function renderAll(){if(!G)return;renderTop();renderOrder();renderAct();renderRoster()}
+function renderTop(){
+  $('#chy').innerHTML=`<span>Floor <b>${G.floor}</b></span><span>${esc(THEMES[G.theme].n)}</span><span>Round <b>${G.round}</b></span><span class="vw">Viewers <b>${fmtV(G.viewers)}</b></span>`;
+  $('#roundLbl').textContent=G.phase==='plan'?'planning':G.phase==='play'?'in play':'';
+}
+function chipFor(o,i){
+  if(o.kind==='h'){const h=heroById(o.id);return`<div class="chip ${i===G.oi?'now':i<G.oi?'done':''}"><span class="in">${o.init}</span><span class="dot" style="background:${CLASSES[h.cls].col}"></span>${esc(h.name)}</div>`}
+  const T=ETYPES[o.type],n=G.enemies.filter(e=>e.type===o.type).length;
+  return`<button class="chip enemy ${i===G.oi?'now':i<G.oi?'done':''}" data-et="${o.type}"><span class="in">${o.init}</span><span class="dot" style="background:${T.col}"></span>${esc(T.n)}${n>1?' ×'+n:''} <small style="color:var(--mute);font-weight:500">${esc(G.ecards[o.type].n)}</small></button>`;
+}
+function renderOrder(){
+  const el=$('#order');
+  if(G.phase==='play'&&G.order.length){el.innerHTML=G.order.map(chipFor).join('')}
+  else{
+    const hs=liveHeroes().map(h=>`<div class="chip"><span class="in">${h.rest?'99':h.sel.length?deckOf(h)[h.sel[0]].i:'··'}</span><span class="dot" style="background:${CLASSES[h.cls].col}"></span>${esc(h.name)}</div>`);
+    const es=[...new Set(G.enemies.map(e=>e.type))].map(t=>`<button class="chip enemy" data-et="${t}"><span class="in">??</span><span class="dot" style="background:${ETYPES[t].col}"></span>${esc(ETYPES[t].n)}${G.enemies.filter(e=>e.type===t).length>1?' ×'+G.enemies.filter(e=>e.type===t).length:''}</button>`);
+    el.innerHTML=hs.join('')+es.join('');
+  }
+  el.querySelectorAll('[data-et]').forEach(b=>b.onclick=()=>{const e=G.enemies.find(x=>x.type===b.dataset.et);if(e)inspectUnit(e)});
+}
+function cardHTML(h,ci,opts={}){
+  const c=deckOf(h)[ci];const lt=c.L==='T'?'<span class="lost">LOST</span>':'',lb=c.L==='B'?'<span class="lost">LOST</span>':'';
+  return`<button class="card ${opts.sel?'sel':''}" data-ci="${ci}" aria-pressed="${!!opts.sel}">${opts.lead?'<span class="lead">LEAD</span>':''}<span class="cn">${esc(c.n)}</span><span class="half">${esc(stepsText(c.t))}${lt}</span><span class="ini">${c.i}</span><span class="half">${esc(stepsText(c.b))}${lb}</span></button>`;
+}
+function renderAct(){
+  const el=$('#act');
+  if(G.phase==='plan'){
+    const humans=liveHeroes().filter(h=>h.human);
+    const tabH=heroById(G.planTab);
+    let html=`<h3>Round ${G.round}: plan</h3><p class="sub">Each crawler picks two cards. The first card picked leads and sets initiative (lower acts first). On your turn you'll use the top half of one and the bottom half of the other.</p>`;
+    if(humans.length>1||humans.some(h=>h.forced))html+=`<div class="tabs">${humans.map(h=>`<button class="tab ${h.id===G.planTab?'on':''} ${(h.rest||h.sel.length===2)?'ok':''}" data-tab="${h.id}">${esc(h.name)}</button>`).join('')}</div>`;
+    if(tabH){
+      if(tabH.forced)html+=`<p class="note" style="color:var(--amber)">${esc(tabH.name)} has fewer than two cards in hand and must long rest this round.</p>`;
+      else{
+        html+=`<div class="sech"><span>${esc(tabH.name)}'s hand · ${tabH.hand.length}</span><span>discard ${tabH.discard.length} · lost ${tabH.lost.length}</span></div>`;
+        html+=`<div class="hand">${tabH.hand.slice().sort((a,b)=>deckOf(tabH)[a].i-deckOf(tabH)[b].i).map(ci=>cardHTML(tabH,ci,{sel:tabH.sel.includes(ci),lead:tabH.sel[0]===ci})).join('')}</div>`;
+        html+=`<div class="row"><button class="btn ghost" id="btnRest" ${tabH.discard.length?'':'disabled'}>${tabH.rest?'Cancel long rest':'Long rest instead'}</button><span class="note" style="margin:0">Rest: act at 99, heal 2, recover discards, refresh items, lose 1 card.</span></div>`;
+      }
+    }else html+=`<p class="note">CPU crawlers are planning…</p>`;
+    const cpu=liveHeroes().filter(h=>!h.human);
+    if(cpu.length)html+=`<p class="note">${cpu.map(h=>`${esc(h.name)} (CPU): ${h.rest?'resting':'ready'}`).join(' · ')}</p>`;
+    html+=`<div class="row"><button class="btn big" id="btnGo" ${planned()?'':'disabled'}>Reveal initiative & start round</button></div>`;
+    el.innerHTML=html;
+    el.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{G.planTab=+b.dataset.tab;renderAct()});
+    el.querySelectorAll('.card[data-ci]').forEach(b=>b.onclick=()=>{
+      const ci=+b.dataset.ci;const h=tabH;h.rest=false;
+      if(h.sel.includes(ci))h.sel=h.sel.filter(x=>x!==ci);else if(h.sel.length<2)h.sel.push(ci);else h.sel=[h.sel[0],ci];
+      if(h.sel.length===2){const nx=humans.find(x=>x!==h&&!x.rest&&x.sel.length<2);if(nx)G.planTab=nx.id}
+      renderAll();
+    });
+    const br=$('#btnRest');if(br)br.onclick=()=>{tabH.rest=!tabH.rest;tabH.sel=[];if(tabH.rest){const nx=humans.find(x=>x!==tabH&&!x.rest&&x.sel.length<2);if(nx)G.planTab=nx.id}renderAll()};
+    $('#btnGo').onclick=()=>beginRound();
+    return;
+  }
+  if(G.phase==='play'){
+    const u=unitById(G.active);
+    if(G.turn&&u&&u.side==='hero'&&u.human){
+      const T=G.turn,h=u,D=deckOf(h),busy=!!G.pick;
+      const half=(ci,hf)=>{const c=D[ci];const steps=hf==='t'?c.t:c.b;const usedHere=T.used[ci]&&T.used[ci][0]===hf;const slotFree=hf==='t'?T.top===null:T.bot===null;const dis=busy||!!T.used[ci]||!slotFree;const lost=c.L===(hf==='t'?'T':'B');
+        return`<button class="hbtn ${usedHere?'used':''}" data-ci="${ci}" data-h="${hf}" ${dis?'disabled':''}>${esc(stepsText(steps))}${lost?'<span class="lost">LOST</span>':''}</button><button class="basic" data-ci="${ci}" data-h="${hf}" data-basic="1" ${dis?'disabled':''}>or basic ${hf==='t'?'Attack 2':'Move 2'}</button>`};
+      let html=`<h3>${esc(h.name)}'s turn</h3><p class="sub">${T.top===null&&T.bot===null?'Use the top half of one card and the bottom half of the other, in either order.':T.top===null?'Now use a top half.':'Now use a bottom half.'}</p>`;
+      html+=`<div class="play2">${h.sel.map(ci=>`<div class="pcard"><div class="cn">${esc(D[ci].n)}<span>${D[ci].i}</span></div>${half(ci,'t')}${half(ci,'b')}</div>`).join('')}</div>`;
+      const items=h.items.filter(id=>ITEMS[id].c);
+      if(items.length)html+=`<div class="row">${items.map(id=>`<button class="btn item" data-item="${id}" ${busy||h.used[id]?'disabled':''} title="${esc(ITEMS[id].d)}">${esc(ITEMS[id].n)}${h.used[id]?' (used)':''}</button>`).join('')}</div>`;
+      html+=`<div class="row"><button class="btn ghost" id="btnEnd" ${busy?'disabled':''}>End turn</button></div>`;
+      el.innerHTML=html;
+      el.querySelectorAll('[data-ci][data-h]').forEach(b=>b.onclick=()=>choose({type:'half',ci:+b.dataset.ci,half:b.dataset.h,basic:!!b.dataset.basic}));
+      el.querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>choose({type:'item',id:b.dataset.item}));
+      $('#btnEnd').onclick=()=>choose({type:'end'});
+      return;
+    }
+    if(u){
+      if(u.side==='enemy'){const c=G.ecards[u.type];el.innerHTML=`<h3>${esc(u.name)}</h3><p class="sub">Monster turn · ${esc(c.n)}: ${esc(enemyCardText(u,c))}</p>`}
+      else el.innerHTML=`<h3>${esc(u.name)}</h3><p class="sub">${u.rest?'Taking a long rest.':'CPU crawler is acting.'}</p>`;
+    }else el.innerHTML=`<h3>Resolving…</h3>`;
+    return;
+  }
+  if(G.phase==='loot')el.innerHTML=`<h3>Floor cleared</h3><p class="sub">Choose loot in the System notice.</p>`;
+  if(G.phase==='over')el.innerHTML=`<h3>Broadcast over</h3><p class="sub">Start a new crawl from the menu.</p>`;
+}
+function enemyCardText(u,c){const p=[];if(c.sh)p.push(`Shield ${c.sh}`);if(c.heal)p.push(`Heal ${c.heal} nearby`);if(c.str)p.push('Strengthen allies');if(c.summon)p.push('Summon');p.push(`Move ${Math.max(0,u.mv+(c.mv||0))}`);let a=`Attack ${Math.max(0,u.atk+(c.atk||0))}`;if(u.rng)a+=` · Range ${u.rng}`;if((c.tg||u.tg)>1)a+=` · ${c.tg||u.tg} targets`;if(c.push)a+=` · Push ${c.push}`;(c.eff||[]).forEach(e=>a+=' · '+EFF[e]);p.push(a);return p.join(', ')}
+function renderRoster(){
+  $('#roster').innerHTML=G.heroes.map(h=>{
+    const gone=h.down||h.exhausted;const mh=maxHp(h);
+    const st=[shieldOf(h)?`<span class="st sh">⛨${shieldOf(h)}</span>`:'',h.st.stun?'<span class="st stun">STUN</span>':'',h.st.immob?'<span class="st immob">IMMOB</span>':'',h.st.poison?'<span class="st poison">POISON</span>':'',h.st.str?'<span class="st str">STR</span>':''].join('');
+    return`<button class="hero ${G.active===h.id?'now':''} ${gone?'gone':''}" data-hid="${h.id}"><span class="tok" style="background:${CLASSES[h.cls].col}">${CLASSES[h.cls].g}</span><span style="min-width:0"><span class="hn"><span>${esc(h.name)}${st?' '+st:''}</span><small>${gone?(h.down?'DOWN':'EXHAUSTED'):`${h.hp}/${mh} HP`}</small></span><span class="bar"><i style="width:${gone?0:100*h.hp/mh}%"></i></span><span class="meta"><span>${CLASSES[h.cls].name}${h.human?'':' · CPU'}</span><span>hand ${h.hand.length}</span><span>disc ${h.discard.length}</span><span>lost ${h.lost.length}</span><span>Lv ${h.lvl+1}</span></span></span></button>`;
+  }).join('');
+  document.querySelectorAll('[data-hid]').forEach(b=>b.onclick=()=>inspectUnit(heroById(+b.dataset.hid)));
+}
+function renderFeed(){const el=$('#feed');el.innerHTML=G.log.slice(-60).map(l=>`<div class="${l.cls}">${esc(l.t)}</div>`).join('');el.scrollTop=el.scrollHeight}
+
+/* ============ screens ============ */
+let PARTY=[];
+function showStart(){
+  $('#scrStart').hidden=false;$('#scrParty').hidden=true;
+  $('#btnCont').hidden=!loadSave();
+  type($('#startSys'),"SYSTEM: Good evening, contestants. Your city has been converted into a dungeon for entertainment purposes. Every floor down is worth more viewers. Every viewer is worth nothing. Please proceed to registration.");
+}
+function showParty(){
+  $('#scrStart').hidden=true;$('#scrParty').hidden=false;
+  if(!PARTY.length){const n=shuffle(NAMES.slice());PARTY=[{cls:'champ',name:n[0],human:true},{cls:'medic',name:n[1],human:false},{cls:'hex',name:n[2],human:false}]}
+  renderParty();renderClasses();
+}
+function renderParty(){
+  $('#partyCount').textContent=`${PARTY.length} / 4`;
+  $('#party').innerHTML=PARTY.map((p,i)=>`<div class="slot"><div class="top"><span class="tok" style="background:${CLASSES[p.cls].col}">${CLASSES[p.cls].g}</span><input id="pname${i}" value="${esc(p.name)}" maxlength="16" aria-label="Crawler name"><button class="x" data-rm="${i}" aria-label="Remove">✕</button></div>
+    <div style="font-size:13px;color:var(--mute)">${CLASSES[p.cls].name} · ${CLASSES[p.cls].hp} HP</div>
+    <div class="seg"><button data-hu="${i}" class="${p.human?'on':''}">Player</button><button data-cpu="${i}" class="${p.human?'':'on'}">CPU</button></div></div>`).join('')||'<p class="note">No crawlers yet. Add one from the classes below.</p>';
+  PARTY.forEach((p,i)=>{$('#pname'+i).oninput=e=>p.name=e.target.value});
+  document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{PARTY.splice(+b.dataset.rm,1);renderParty();renderClasses()});
+  document.querySelectorAll('[data-hu]').forEach(b=>b.onclick=()=>{PARTY[+b.dataset.hu].human=true;renderParty()});
+  document.querySelectorAll('[data-cpu]').forEach(b=>b.onclick=()=>{PARTY[+b.dataset.cpu].human=false;renderParty()});
+  $('#btnStart').disabled=!PARTY.length;
+}
+const openDeck=new Set();
+function renderClasses(){
+  $('#classes').innerHTML=Object.entries(CLASSES).map(([k,C])=>`<div class="cls"><h4><span class="tok" style="background:${C.col}">${C.g}</span>${C.name}</h4><p class="role">${C.role}</p>
+    <div class="stats"><span>HP <b>${C.hp}</b></span><span>Cards <b>${C.deck.length}</b></span><span>Lost cards <b>${C.deck.filter(d=>d.L).length}</b></span></div>
+    <p class="role" style="color:var(--fg)">${C.passive}</p>
+    <ul class="gear">${C.gear.map(g=>`<li><b>${ITEMS[g].n}</b>: ${ITEMS[g].d}</li>`).join('')}</ul>
+    ${openDeck.has(k)?`<div class="deck">${C.deck.map(d=>`<div><b>${d.i}</b><span><strong>${d.n}</strong>${d.L?' <span class="lost">LOST</span>':''}<br><small>Top: ${stepsText(d.t)}<br>Bottom: ${stepsText(d.b)}</small></span></div>`).join('')}</div>`:''}
+    <div class="flex" style="margin-top:auto"><button class="btn" data-add="${k}" ${PARTY.length>=4?'disabled':''}>Add to party</button><button class="btn ghost" data-deck="${k}">${openDeck.has(k)?'Hide':'View'} cards</button></div></div>`).join('');
+  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(PARTY.length>=4)return;const used=PARTY.map(p=>p.name);PARTY.push({cls:b.dataset.add,name:shuffle(NAMES.filter(n=>!used.includes(n)))[0]||'Crawler',human:!PARTY.some(p=>p.human)});renderParty();renderClasses()});
+  document.querySelectorAll('[data-deck]').forEach(b=>b.onclick=()=>{const k=b.dataset.deck;openDeck.has(k)?openDeck.delete(k):openDeck.add(k);renderClasses()});
+}
+function showRules(){
+  openModal(`<div class="k">System notes · Rules</div><h3>How to crawl</h3><div class="rules"><ol>
+  <li><b>Plan.</b> Each round, every crawler secretly picks two ability cards. The first one picked leads; its number is your initiative. Lower goes first.</li>
+  <li><b>Act.</b> On your turn, use the <b>top</b> half of one card and the <b>bottom</b> half of the other, in either order. Any half can be swapped for a basic Attack 2 (top) or Move 2 (bottom).</li>
+  <li><b>Cards are stamina.</b> Played cards go to your discard. Halves marked <span class="lost">LOST</span> are gone until the next floor. When you can't play two cards, you must long rest (heal 2, recover discards, refresh items, lose one card at random). No cards at all means exhaustion.</li>
+  <li><b>Monsters</b> draw one ability card per type each round. Elites have gold borders. Bosses (pink) appear every third floor.</li>
+  <li><b>Attacks</b> draw a modifier from −2 to +2, ×2, or MISS. Shields reduce damage. Stun skips a turn, Immobilize prevents moving, Poison deals 1 damage at the start of each turn until healed.</li>
+  <li><b>Traps</b> hurt whoever steps on them. Monsters walk around them, so push them in. Chests give an item when you end a move on one.</li>
+  <li><b>Clear the floor</b> to level up, revive the fallen, pick loot, and descend.</li>
+  <li><b>Click any monster, trap, or crawler</b> to hear what the System thinks of it.</li></ol></div>
+  <div class="row"><button class="btn" id="mClose">Got it</button></div>`);
+  $('#mClose').onclick=closeModal;
+}
+
+/* ============ wiring ============ */
+$('#btnNew').onclick=showParty;
+$('#btnBack').onclick=showStart;
+$('#btnRules').onclick=showRules;$('#btnRules2').onclick=showRules;
+$('#btnStart').onclick=()=>{SPEED=+$('#selSpeed').value;syncSpeed();$('#scrParty').hidden=true;newGame(PARTY.map(p=>({...p,name:(p.name||'').trim()||CLASSES[p.cls].name})));};
+$('#btnCont').onclick=()=>{const s=loadSave();if(!s)return;G=s;G.deaths=[];$('#scrStart').hidden=true;layout();if(!G.enemies.length){floorClear();return}G.round--;startRound()};
+$('#btnMenu').onclick=()=>{openModal(`<div class="k">System notes · Menu</div><h3>Commercial break</h3><div class="say">The game saves at the start of every round. Leaving now will cost you whatever happened since.</div><div class="row"><button class="btn" id="mResume">Resume</button><button class="btn ghost" id="mNew">New crawl</button><button class="btn ghost" id="mTitle">Title screen</button></div>`);
+  $('#mResume').onclick=closeModal;$('#mNew').onclick=()=>{closeModal();location.hash='';reset();showParty()};$('#mTitle').onclick=()=>{closeModal();reset();showStart()}};
+function reset(){if(G&&G.pick)G.pick=null;G=null;$('#prompt').hidden=true;location.reload()}
+const SPEEDS=[[420,'Normal'],[160,'Fast'],[750,'Slow']];
+function syncSpeed(){const s=SPEEDS.find(x=>x[0]===SPEED)||SPEEDS[0];$('#btnSpeed').textContent='Speed: '+s[1]}
+$('#btnSpeed').onclick=()=>{const i=SPEEDS.findIndex(x=>x[0]===SPEED);SPEED=SPEEDS[(i+1)%SPEEDS.length][0];syncSpeed()};
+window.addEventListener('resize',()=>{layout()});
+new ResizeObserver(()=>layout()).observe($('#board'));
+(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>{layout()});
+layout();requestAnimationFrame(loop);
+showStart();
+if('serviceWorker' in navigator&&window.__PWA__){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+</script>
+
+</body>
+</html>
