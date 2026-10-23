@@ -200,6 +200,14 @@ select{background:var(--ink);color:var(--fg);border:1px solid var(--line2);borde
 .chy .gold b{color:#f2c14a}
 .facts .gold b{color:#f2c14a}
 .perkline{font:400 11px var(--f-mono);color:var(--amber)}
+.opt.leg{border-color:#c9a227}
+.opt.leg b{color:#f2c14a}
+.opt.up b::before{content:"▲ ";color:var(--good)}
+.newcard{margin-top:10px;display:grid;gap:6px}
+.scard{max-width:250px}
+.newcard select{width:100%;min-width:0;max-width:100%;font-size:14px}
+.loot>*,.newcard,.lrow{min-width:0}
+.ws{margin-top:12px}
 @media (max-width:880px){
   body:has(#prompt:not([hidden])) .toast{bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 130px)}
   #prompt{position:fixed;left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));z-index:15}
@@ -239,7 +247,7 @@ select{background:var(--ink);color:var(--fg);border:1px solid var(--line2);borde
 
 <section class="scr" id="scrStart" hidden>
   <div class="wrap">
-    <div class="kicker">Season 2 · Live from beneath the parking lot</div>
+    <div class="kicker">Season 3 · Live from beneath the parking lot</div>
     <h1 class="hero-title">DESCENT<br>LIVE</h1>
     <p class="lede">A turn-based hex dungeon crawl, broadcast to an audience of billions. Pick crawlers, play two ability cards a turn, out-initiative the monsters, and go one floor deeper than you should.</p>
     <div class="sysbox" id="startSys"></div>
@@ -264,6 +272,8 @@ select{background:var(--ink);color:var(--fg);border:1px solid var(--line2);borde
       <label class="flex" style="gap:6px;color:var(--mute);font-size:14px" for="selSpeed">AI speed
         <select id="selSpeed"><option value="420">Normal</option><option value="160">Fast</option><option value="750">Slow</option></select></label>
       <label class="flex" style="gap:6px;color:var(--mute);font-size:14px" for="chkFog"><input type="checkbox" id="chkFog" checked> Fog of war</label>
+      <label class="flex" style="gap:6px;color:var(--mute);font-size:14px" for="selDiff">Difficulty
+        <select id="selDiff"><option value="0.8">Casual</option><option value="1" selected>Standard</option><option value="1.3">Brutal</option></select></label>
       <button class="btn ghost" id="btnBack">Back</button>
     </div>
     <div class="sech" style="margin-top:26px"><span>Crawler classes</span><span>tap “Add” to recruit</span></div>
@@ -321,6 +331,7 @@ function stepText(s){
     case'trap':return`Set trap · ${s.v} dmg`+(s.eff?' · '+s.eff.map(e=>EFF[e]).join(' · '):'');
     case'recover':return`Recover ${s.v} discarded cards`;
     case'ret':return`Retaliate ${s.v} (this round)`;
+    case'rewind':return"Rewind: this turn's two cards go back to your hand";
     case'taunt':return'Taunt: monsters target you this round';
     case'summon':return`Summon ${SUMMONS[s.t].n}`;
   }
@@ -379,7 +390,26 @@ const ADV={
   bulwark:['Unbreakable',60,[S(4),RET(2)],[H(3)],'T'],
   necro:['Mass Grave',50,[SUM('skel'),A(2,3)],[M(3)]],
 };
-for(const k in CLASSES){const C=CLASSES[k];C.adv=ADV[k];C.deck=[...C.cards,C.adv].map((c,i)=>({idx:i,n:c[0],i:c[1],t:c[2],b:c[3],L:c[4]||'',adv:i===C.cards.length}))}
+const ADV2={
+  champ:[['Ladder Match',32,[A(5,0,{push:2})],[M(4,1),S(1)]],['Tag Team',26,[A(4,0,{tg:2})],[STR({all:1,r:2})]],
+    ['Steel Chair Symphony',44,[A(3,0,{aoe:1,eff:['stun']})],[H(4),S(2)],'T'],['Main Event',8,[A(9,0,{eff:['stun']}),RET(2)],[M(5,1),A(3)],'T']],
+  hex:[['Chain Fireball',38,[A(3,4,{aoe:1})],[M(3)]],['Time Skip',5,[A(3,4,{eff:['stun']})],[{k:'recover',v:2}],'B'],
+    ['Black Hole',70,[A(4,4,{aoe:1,eff:['immob']})],[M(4,1)],'T'],['Supernova',90,[A(7,4,{aoe:1,eff:['stun']})],[H(4),S(2)],'T']],
+  cut:[['Twin Daggers',10,[A(4,0,{tg:2})],[M(5)]],['Nightshade',20,[A(3,0,{tg:3,eff:['poison']})],[M(4,1)]],
+    ['Vanish',6,[M(6,1),S(3)],[A(4)]],['Thousand Cuts',16,[A(4,0,{tg:3,eff:['stun']})],[M(5,1)],'T']],
+  medic:[['Combat Stims',22,[STR({all:1,r:3}),H(2,3,{all:1})],[M(4)]],['Morphine Mist',48,[A(3,3,{aoe:1,eff:['stun']})],[H(3,3)]],
+    ['Triage Tent',66,[H(5,3,{all:1}),S(1,{all:1,r:3})],[M(3)],'T'],['Lazarus Protocol',80,[H(10,2)],[S(3,{all:1,r:3})],'T']],
+  bard:[['Anthem',30,[STR({all:1,r:3}),S(1,{all:1,r:3})],[M(4)]],['Sonic Boom',36,[A(4,3,{aoe:1,push:1})],[M(3)]],
+    ['Earworm',50,[A(2,4,{tg:3,eff:['stun']})],[H(3,3,{all:1})],'T'],['Final Tour',12,[A(5,3,{aoe:1}),STR({all:1,r:3})],[M(5,1)],'T']],
+  sapper:[['Claymore',34,[TRP(6,{eff:['stun']}),TRP(4)],[M(4)]],['Thermite',46,[A(4,3,{aoe:1,eff:['poison']})],[M(3)]],
+    ['Demolition Derby',20,[M(5,1),A(4,0,{aoe:1,push:1})],[S(2)]],['Orbital Strike',88,[A(8,5,{aoe:1,eff:['stun']})],[TRP(5)],'T']],
+  bulwark:[['Tower Shield',58,[S(3,{all:1,r:1}),TAUNT()],[M(3)]],['Riposte',28,[RET(3),A(4)],[M(3)]],
+    ['Earthquake Stomp',45,[A(3,0,{aoe:1,eff:['immob'],push:1})],[H(3)]],['Last Stand',75,[S(6),RET(3),TAUNT()],[H(5)],'T']],
+  necro:[['Bone Wall',55,[SUM('ghoul'),S(2)],[M(3)],'T'],['Soul Harvest',30,[A(3,3,{tg:2}),H(3)],[M(3)]],
+    ['Plague of Paperwork',42,[A(3,3,{aoe:1,eff:['poison','immob']})],[M(2)]],['Undead Workforce',70,[SUM('ghoul'),SUM('skel')],[STR({all:1,r:3})],'T']],
+};
+const ADV_LV=[2,4,6,8,10];
+for(const k in CLASSES){const C=CLASSES[k];C.advs=[ADV[k],...ADV2[k]];C.adv=C.advs[0];const nb=C.cards.length;C.deck=[...C.cards,...C.advs].map((c,i)=>({idx:i,n:c[0],i:c[1],t:c[2],b:c[3],L:c[4]||'',adv:i>=nb,alv:i>=nb?ADV_LV[i-nb]:0}))}
 
 const ITEMS={
   knux:{n:'Brass Knuckles',d:'+1 melee damage',p:{atk:1},s:'Knuckles of brass, morals of tin.'},
@@ -402,25 +432,67 @@ const ITEMS={
   vest:{n:'Hi-Vis Safety Vest',d:'Permanent Shield 1, +1 max HP',p:{sh:1,hp:1},s:'Monsters can see you better. So can the healer.',lock:1},
   airhorn:{n:'Stadium Air Horn',d:'Once per floor: Attack 1 · Blast around you · Stun',c:[A(1,0,{aoe:1,eff:['stun']})],s:'Universally hated. Universally effective.',lock:1},
   jetpack:{n:'Leaf-Blower Jetpack',d:'Once per floor: Move 6 · Jump',c:[M(6,1)],s:'Technically a leaf blower. Technically flying.',lock:1},
+  phoenix:{n:'Phoenix Down Parka',leg:1,price:34,dl:lv=>`${lv>=3?'Twice':'Once'} per floor: when you would go down, get back up with ${3*lv} HP`,s:'Stuffed with feathers from a bird that refused to stay dead. Warm. Smells like smoke.'},
+  fang:{n:'Leech Fang Grill',leg:1,price:28,dl:lv=>`Heal ${lv} whenever one of your attacks deals damage`,s:'Dental work by a mosquito. The mosquito was not licensed.'},
+  thorns:{n:'Cactus Onesie',leg:1,price:26,dl:lv=>`Permanent Retaliate ${lv+1}: melee attackers take ${lv+1} damage`,s:'Hugs not recommended. Hugs not available.'},
+  piercer:{n:'Armor-Piercing Spork',leg:1,price:26,dl:lv=>`Your attacks ignore ${2*lv} Shield`,s:'Spoon, fork, and war crime in one convenient utensil.'},
+  watch:{n:'Overclocked Smartwatch',leg:1,price:24,dl:lv=>`Your initiative is ${10*lv} lower, so you act sooner`,s:'Set fifteen minutes fast. Also set on fire.'},
+  dice:{n:'Loaded Dice',leg:1,price:30,dl:lv=>`Draw ${lv+1} attack modifiers and keep the best one`,s:'The System has noticed. The System approves of cheating that improves ratings.'},
+  drone:{n:'Pocket Medic Drone',leg:1,price:28,dl:lv=>`At the start of each of your turns: Heal ${lv+1} and cure Poison`,s:'Buzzes. Judges. Patches.'},
+  banner:{n:'Sponsor Banner',leg:1,price:30,dl:lv=>`You and allies within 2 hexes deal +${lv} damage`,s:'"This beatdown brought to you by a beverage." Ad revenue is a hell of a drug.'},
+  venom:{n:'Venom Gland Gauntlet',leg:1,price:24,dl:lv=>`Your attacks inflict Poison${lv>1?` and deal +${lv-1} damage to poisoned targets`:''}`,s:'Harvested from a Franchise Slime. Franchise fees apply.'},
+  cape:{n:'Cape of Many Pockets',leg:1,price:32,dl:lv=>`+${lv} use${lv>1?'s':''} per floor for each of your consumable items`,s:'It has pockets inside its pockets. One of them contains a smaller cape.'},
+  deal:{n:'Sponsorship Contract',leg:1,price:22,dl:lv=>`+${2*lv} gold for every monster you kill`,s:"Read the fine print. Actually, don't. It reads you back."},
+  remote:{n:'Rewind Remote',leg:1,price:36,maxLv:2,twiceAt:2,c:[{k:'rewind'}],s:'Rewinds you, specifically. Batteries not included. Batteries never included.'},
+  espresso:{n:'Espresso of the Gods',leg:1,price:30,c:[M(3),A(4),S(2)],s:'Brewed by a deity who has not slept since the Bronze Age.'},
+  nuke:{n:'Tactical Microwave',leg:1,price:38,c:[A(5,4,{aoe:1,eff:['stun']})],s:'Do not put metal in it. Do put monsters in it.'},
 };
 const PERKS={
-  tough:{n:'Thick Skin',d:'+2 max HP',p:{hp:2},multi:1},
-  swift:{n:'Quick Feet',d:'+1 to every Move',p:{mv:1}},
-  heavy:{n:'Heavy Hitter',d:'+1 melee damage',p:{atk:1}},
-  sharp:{n:'Sharpshooter',d:'+1 ranged damage',p:{rng:1}},
-  bedside:{n:'Bedside Manner',d:'+1 to every Heal',p:{heal:1}},
-  iron:{n:'Iron Hide',d:'Permanent Shield 1',p:{sh:1}},
-  lucky:{n:'Lucky Socks',d:'Your MISS draws count as −1 instead'},
-  nap:{n:'Power Nap',d:'Long rests heal 3 and never lose a card'},
-  learn:{n:'New Technique',d:'Learn your class signature card'},
+  tough:{n:'Thick Skin',max:99,p:{hp:2},d:r=>`+2 max HP (total +${2*r})`},
+  swift:{n:'Quick Feet',max:2,p:{mv:1},d:r=>`+1 to every Move (total +${r})`},
+  heavy:{n:'Heavy Hitter',max:3,p:{atk:1},d:r=>`+1 melee damage (total +${r})`},
+  sharp:{n:'Sharpshooter',max:3,p:{rng:1},d:r=>`+1 ranged damage (total +${r})`},
+  bedside:{n:'Bedside Manner',max:3,p:{heal:1},d:r=>`+1 to every Heal (total +${r})`},
+  iron:{n:'Iron Hide',max:2,p:{sh:1},d:r=>`Permanent Shield ${r}`},
+  lucky:{n:'Lucky Socks',max:3,d:r=>`Your MISS draws count as ${['−1','+0','+1'][r-1]} instead`},
+  nap:{n:'Power Nap',max:3,d:r=>`Long rests heal ${2+r} and never lose a card`},
+  quick:{n:'Quick Draw',max:2,d:r=>`Your initiative is ${5*r} lower, so you act sooner`},
+  vamp:{n:'Bloodthirst',max:3,d:r=>`Heal ${r} whenever you kill a monster`},
+  brutal:{n:'Bully',max:3,d:r=>`+${r} damage against Stunned, Immobilized, or Poisoned targets`},
+  pockets:{n:'Deep Pockets',max:1,d:()=>'+1 use per floor for each of your consumable items'},
+  focus:{n:'Overtime',max:2,d:r=>`Deck limit +${r}: room for more class cards`},
+  learn:{n:'New Technique',max:0,d:()=>'Learned a class card early'},
 };
+const ROM=['','','II','III','IV','V','VI','VII','VIII','IX','X'];
+function rank(h,id){return (h&&h.perks||[]).filter(p=>p===id).length}
+function perkSummary(h){const c={};for(const p of h.perks||[])c[p]=(c[p]||0)+1;return Object.entries(c).map(([k,n])=>PERKS[k].n+(n>1?' '+(ROM[n]||n):'')).join(' · ')}
 const UNLOCKS=[{k:'class',id:'bulwark'},{k:'class',id:'necro'},{k:'item',id:'lanyard'},{k:'item',id:'vest'},{k:'item',id:'airhorn'},{k:'item',id:'jetpack'}];
 const PROFILE_KEY='descent-live-profile';
 let profile={boxes:1,classes:[],items:[],best:0,runs:0,startGold:0};
 try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');if(p)profile={...profile,...p}}catch(e){}
 function saveProfile(){try{localStorage.setItem(PROFILE_KEY,JSON.stringify(profile))}catch(e){}}
 function itemPool(){return Object.keys(ITEMS).filter(k=>!ITEMS[k].lock||profile.items.includes(k))}
-function itemPrice(id){return ['plot','tag','lanyard','vest'].includes(id)?16:ITEMS[id].c?8:12}
+function itemPrice(id){return ITEMS[id].price||(['plot','tag','lanyard','vest'].includes(id)?16:ITEMS[id].c?8:12)}
+function itemMax(id){return ITEMS[id].maxLv||(ITEMS[id].leg?3:4)}
+function twiceAt(id){return ITEMS[id].twiceAt||3}
+function ilv(h,id){return h&&h.items&&h.items.includes(id)?((h.ilv&&h.ilv[id])||1):0}
+function itemName(id,lv){return ITEMS[id].n+(lv>1?' '+ROM[lv]:'')}
+function upCost(id,lv){return Math.round(itemPrice(id)*(0.6+0.4*lv))}
+function itemSteps(id,lv){return (ITEMS[id].c||[]).map(st=>{const c=JSON.parse(JSON.stringify(st));if(typeof c.v==='number')c.v+=lv-1;return c})}
+function itemStats(id,lv){const p=ITEMS[id].p;if(!p)return{};const o={};let soft=false;for(const k in p){if(k==='sh'||k==='mv'){o[k]=p[k]+(lv>=3?1:0);soft=true}else o[k]=p[k]*lv}if(soft&&lv>1)o.hp=(o.hp||0)+2*(lv-1);return o}
+const STAT_TXT={atk:x=>`+${x} melee damage`,rng:x=>`+${x} ranged damage`,hp:x=>`+${x} max HP`,mv:x=>`+${x} to every Move`,sh:x=>`Permanent Shield ${x}`,heal:x=>`+${x} to every Heal`};
+function itemDesc(id,lv=1){const I=ITEMS[id];if(I.dl)return I.dl(lv);if(I.c)return `${lv>=twiceAt(id)?'Twice':'Once'} per floor: ${stepsText(itemSteps(id,lv))}`;return Object.entries(itemStats(id,lv)).map(([k,v])=>STAT_TXT[k](v)).join(', ')}
+function usesPerFloor(h,id){return (ilv(h,id)>=twiceAt(id)?2:1)+(ITEMS[id].c?ilv(h,'cape')+rank(h,'pockets'):0)}
+function usesLeft(h,id){return usesPerFloor(h,id)-((h.used&&h.used[id])||0)}
+function giveItem(h,id){h.ilv=h.ilv||{};const before=maxHp(h);let r;if(h.items.includes(id)){const lv=ilv(h,id);if(lv>=itemMax(id))return 'max';h.ilv[id]=lv+1;r='up'}else{h.items.push(id);h.ilv[id]=1;r='new'}const gain=maxHp(h)-before;if(gain>0)h.hp+=gain;return r}
+function migrateItems(h){h.ilv=h.ilv||{};h.skipped=h.skipped||[];const seen=[];for(const id of h.items||[]){if(!ITEMS[id])continue;if(seen.includes(id))h.ilv[id]=Math.min(itemMax(id),(h.ilv[id]||1)+1);else{seen.push(id);h.ilv[id]=h.ilv[id]||1}}h.items=seen;h.used=h.used||{};for(const k in h.used)h.used[k]=+h.used[k]||0}
+function handMax(h){return CLASSES[h.cls].cards.length+2+rank(h,'focus')}
+function pendingCard(h,lvl){const C=CLASSES[h.cls],nb=C.cards.length;for(let i=0;i<C.advs.length;i++){const idx=nb+i;if(!h.known.includes(idx)&&!(h.skipped||[]).includes(idx)&&lvl>=ADV_LV[i])return idx}return null}
+function cardPower(c){let p=0;for(const st of [...c.t,...c.b])p+=(typeof st.v==='number'?st.v:2)*(st.tg||1)*(st.aoe?1.5:1)+(st.eff?st.eff.length*1.5:0);return p}
+function weakestCard(h){const D=deckOf(h),nb=CLASSES[h.cls].cards.length;const base=h.known.filter(k=>k<nb);return (base.length?base:h.known).slice().sort((a,b)=>cardPower(D[a])-cardPower(D[b]))[0]}
+function heroInit(h){return h.rest?99:Math.max(1,deckOf(h)[h.sel[0]].i-5*rank(h,'quick')-10*ilv(h,'watch'))}
+function retOf(u){return (u.st.ret||0)+(u.side==='hero'&&!u.summon&&ilv(u,'thorns')?ilv(u,'thorns')+1:0)+((u.aff||[]).includes('thorny')?1+Math.floor(G.floor/9):0)}
+for(const k in ITEMS)if(!ITEMS[k].d)ITEMS[k].d=itemDesc(k,1);
 function classUnlocked(k){return !CLASSES[k].locked||profile.classes.includes(k)}
 
 const ETYPES={
@@ -446,8 +518,27 @@ const ETYPES={
     snark:["Floor boss. A beloved cartoon character whose legal team we cannot afford to name. Hugs for 4 damage and pushes you away, like your dad.","The smile is painted on. The suit is fused on. Somewhere inside, a summer employee is still waiting for a break."]},
   mildew:{n:'Mother Mildew',hp:20,mv:1,atk:2,rng:3,tg:2,boss:1,col:'#86ad58',g:'MM',cards:[{n:'Spore Cloud',i:40,mv:0,atk:0,eff:['poison']},{n:'Call the Kids',i:55,mv:0,atk:-1,summon:'slime'},{n:'Damp Embrace',i:70,mv:0,atk:1,heal:3}],
     snark:["Floor boss. Matriarch of the damp. Summons Franchise Slimes, poisons from range, and has strong opinions about your posture.","Mother Mildew has outlived three ventilation systems and one inspector. The inspector is still here, technically. As a slime."]},
+  repo:{n:'Repo Golem',hp:12,mv:2,atk:4,sh:2,cost:4,col:'#8a7663',g:'RG',tier:4,cards:[{n:'Repossess',i:45,mv:0,atk:0,push:2},{n:'Lien',i:60,mv:0,atk:1,eff:['immob']},{n:'Collateral',i:75,mv:-1,atk:1,sh:1}],
+    snark:["A Repo Golem. Assembled from every couch, car, and kidney ever repossessed down here. It is here for your stuff. You are your stuff.","Shield 2 and a clipboard. The Repo Golem doesn't hate you. You simply missed a payment you didn't know existed."]},
+  wyvern:{n:'Hype Wyvern',hp:8,mv:4,atk:3,rng:3,fly:1,tg:2,cost:4,col:'#3fa7a0',g:'HW',tier:4,cards:[{n:'Trending',i:12,mv:1,atk:0},{n:'Going Viral',i:30,mv:0,atk:0,eff:['poison']},{n:'Ratio',i:52,mv:-1,atk:2}],
+    snark:["A Hype Wyvern. Hatched from an egg that was mostly marketing. Flies, breathes hot takes at two crawlers at once, and has more followers than you have hit points.","Its scales are shiny because it has never done a day of work. It just shows up and everyone screams. Relatable, honestly."]},
+  lich:{n:'Compliance Lich',hp:9,mv:2,atk:3,rng:3,cost:4,col:'#9fb3d9',g:'CL',tier:4,cards:[{n:'Red Tape',i:35,mv:0,atk:-1,tg:2,eff:['immob']},{n:'Mandatory Training',i:55,mv:0,atk:-1,summon:'intern'},{n:'Policy Update',i:70,mv:0,atk:0,heal:3,str:1}],
+    snark:["A Compliance Lich. It achieved immortality by filling out the paperwork for it. Binds crawlers in red tape and summons interns to do the actual work.","Its phylactery is a three-ring binder. Destroying the binder won't kill it, but it will make it very, very upset."]},
+  mimic:{n:'Mimic Vending Machine',hp:13,mv:1,atk:4,cost:4,col:'#c9a227',g:'VM',tier:4,cards:[{n:'Exact Change Only',i:40,mv:0,atk:-1,eff:['stun']},{n:'Out of Order',i:65,mv:0,atk:0,sh:2},{n:'Snack Attack',i:28,mv:1,atk:2}],
+    snark:["A Mimic Vending Machine. You put in a coin, it puts in your arm. Hits for 5, eats dollars, eats crawlers.","B4 is Cheese Puffs. B5 is your femur. Do not press B5."]},
+  auditor:{n:'The Grand Auditor',hp:26,mv:2,atk:4,rng:3,tg:3,boss:1,col:'#5f7fbf',g:'GA',cards:[{n:'Itemized Deductions',i:30,mv:0,atk:-1,eff:['poison']},{n:'Freeze Assets',i:50,mv:0,atk:0,eff:['immob']},{n:'Penalties and Interest',i:70,mv:-1,atk:2}],
+    snark:["Floor boss. The Grand Auditor has reviewed your run and found it deficient. Hits three crawlers at once from range. Every hit is itemized.","It has never smiled. Rumor says it smiled once in 1987 and was immediately audited by itself."]},
+  showrunner:{n:'The Showrunner',hp:30,mv:3,atk:5,boss:1,col:'#e0603a',g:'SR',cards:[{n:'Cut to Commercial',i:20,mv:0,atk:-2,heal:4,str:1},{n:'Ratings Grab',i:45,mv:0,atk:0,summon:'wraith'},{n:'Season Finale',i:65,mv:1,atk:2,push:2,eff:['stun']}],
+    snark:["Floor boss. The Showrunner keeps this whole thing on the air. It isn't angry that you're winning. It's angry that you're boring.","It has notes on your performance. All of the notes are a punch."]},
 };
-const BOSSES=['overdraft','mascot','mildew'];
+const BOSSES=['overdraft','mascot','mildew','auditor','showrunner'];
+const AFFIX={armored:{adj:'Armored',d:'+1 Shield'},vicious:{adj:'Vicious',d:'+1 Attack'},swift:{adj:'Swift',d:'+1 Move'},huge:{adj:'Huge',d:'+40% HP'},
+  regen:{adj:'Regenerating',d:'Heals at the start of its turn'},thorny:{adj:'Thorny',d:'Hits back when attacked in melee'},venomous:{adj:'Venomous',d:'Attacks inflict Poison'},piercing:{adj:'Piercing',d:'Ignores 2 more Shield'}};
+function rollAffixes(n,boss){
+  if(n<6)return[];const keys=shuffle(Object.keys(AFFIX)),p=Math.min(.65,.08*(n-5)*(G.diff||1)),o=[];
+  if(boss){if(n>=9)o.push(keys[0]);if(n>=15)o.push(keys[1]);return o}
+  if(Math.random()<p)o.push(keys[0]);if(n>=12&&Math.random()<p*.4)o.push(keys[1]);return o;
+}
 
 const TRAPS={
   spike:{n:'Spike Plate',dmg:2,eff:[],col:'#d65a4f',s:["A Spike Plate. Ancient technology: a plate, with spikes. Some crawlers step on it on purpose for the achievement. There is no achievement. Fine, there is an achievement."]},
@@ -484,7 +575,7 @@ let SPEED=420;
 const SAVE_KEY='descent-live-v1';
 
 function deckOf(h){return CLASSES[h.cls].deck}
-function bonus(h){const b={atk:0,rng:0,hp:0,mv:0,sh:0,heal:0};if(!h.items)return b;for(const id of h.items){const p=ITEMS[id].p;if(p)for(const k in p)b[k]+=p[k]}for(const id of h.perks||[]){const p=PERKS[id].p;if(p)for(const k in p)b[k]+=p[k]}return b}
+function bonus(h){const b={atk:0,rng:0,hp:0,mv:0,sh:0,heal:0};if(!h.items)return b;for(const id of h.items){if(!ITEMS[id])continue;const p=itemStats(id,ilv(h,id));for(const k in p)b[k]+=p[k]}for(const id of h.perks||[]){const p=PERKS[id]&&PERKS[id].p;if(p)for(const k in p)b[k]+=p[k]}return b}
 function maxHp(u){return u.side==='hero'&&!u.summon?CLASSES[u.cls].hp+u.lvl+bonus(u).hp:u.maxHp}
 function liveHeroes(){return G.heroes.filter(h=>!h.down&&!h.exhausted)}
 function alive(u){return u.summon?G.summons.includes(u):u.side==='hero'?!u.down&&!u.exhausted:G.enemies.includes(u)}
@@ -546,15 +637,15 @@ function spawnFloor(n){
   liveHeroes().forEach((h,i)=>{const t=sp[i];h.c=t.c;h.r=t.r;h._x=null});
   G.heroes.filter(h=>h.down||h.exhausted).forEach(h=>{h.c=-99;h.r=-99});
   const party=G.heroes.length;
-  let budget=Math.round((2+party*2.2)*(1+(n-1)*0.22));
+  let budget=Math.round((2+party*2.2)*(1+(n-1)*0.22)*(G.diff||1));
   const comp=[];
   if(n%3===0){comp.push({type:BOSSES[(n/3-1)%BOSSES.length],elite:0});budget=Math.round(budget*0.5)}
-  const tier=n<=2?1:n<=5?2:3;
-  const types=Object.keys(ETYPES).filter(k=>!ETYPES[k].boss&&ETYPES[k].tier<=tier);
+  const tier=n<=2?1:n<=5?2:n<=7?3:4;
+  const types=Object.keys(ETYPES).filter(k=>!ETYPES[k].boss&&ETYPES[k].tier<=tier&&ETYPES[k].tier>=tier-2);
   let guard=0;
-  while(budget>0&&comp.length<11&&guard++<60){
+  while(budget>0&&comp.length<(n>=8?12:11)&&guard++<60){
     const opts=types.filter(k=>ETYPES[k].cost<=budget);if(!opts.length)break;
-    const ty=pick(opts);const elite=Math.random()<Math.min(0.45,0.07*n)&&ETYPES[ty].cost+1<=budget?1:0;
+    const ty=pick(opts);const elite=Math.random()<Math.min(n>=8?0.5:0.45,0.07*n)&&ETYPES[ty].cost+1<=budget?1:0;
     comp.push({type:ty,elite});budget-=ETYPES[ty].cost+elite;
   }
   const cand=[...G.tiles.values()].filter(t=>t.type==='floor'&&!t.obst&&!t.trap&&!t.chest&&hdist(t,start)>=4);
@@ -571,23 +662,28 @@ function spawnFloor(n){
     addEnemy(c.type,c.elite,t.c,t.r,n);
   }
 }
+function lateMul(n){return 1+0.05*Math.max(0,n-6)}
 function addEnemy(type,elite,c,r,n){
-  const T=ETYPES[type];const party=G.heroes.length;
-  let hp=Math.round(T.hp*(1+0.18*(n-1)));
-  if(T.boss)hp=Math.round(T.hp*(0.55+0.3*party)*(1+0.12*(n-1)));
-  if(elite)hp=Math.round(hp*1.5)+1;
-  const e={id:++G.uid,side:'enemy',type,elite,boss:!!T.boss,name:(elite?'Elite ':'')+T.n,c,r,hp,maxHp:hp,
-    atk:T.atk+Math.floor((n-1)/3)+elite,mv:T.mv,rng:T.rng||0,sh:(T.sh||0)+(elite&&T.sh?1:0),fly:!!T.fly,tg:T.tg||1,st:newSt(),snark:pick(T.snark),awake:!G.fog};
+  const T=ETYPES[type];const party=G.heroes.length;const D=G.diff||1;
+  let hp=T.hp*(1+0.18*(n-1))*lateMul(n);
+  if(T.boss)hp=T.hp*(0.55+0.3*party)*(1+0.12*(n-1))*lateMul(n);
+  hp*=D;if(elite)hp=hp*1.5+1;
+  const aff=rollAffixes(n,T.boss);if(aff.includes('huge'))hp*=1.4;
+  hp=Math.max(1,Math.round(hp));
+  const atk=T.atk+Math.floor((n-1)/3)+Math.max(0,Math.floor((n-7)/4))+elite+(aff.includes('vicious')?1:0)+(D>1.1&&n>=4?1:0)-(D<0.9&&n>=4?1:0);
+  const e={id:++G.uid,side:'enemy',type,elite,boss:!!T.boss,name:(elite?'Elite ':'')+(aff.length?AFFIX[aff[0]].adj+' ':'')+T.n,c,r,hp,maxHp:hp,aff,
+    pierce:Math.max(0,Math.floor((n-6)/3))+(aff.includes('piercing')?2:0),
+    atk:Math.max(1,atk),mv:T.mv+(aff.includes('swift')?1:0),rng:T.rng||0,sh:(T.sh||0)+(elite&&T.sh?1:0)+(aff.includes('armored')?1:0),fly:!!T.fly,tg:T.tg||1,st:newSt(),snark:pick(T.snark),awake:!G.fog};
   G.enemies.push(e);return e;
 }
 
 /* ============ setup ============ */
 function newGame(party){
   profile.runs++;saveProfile();
-  G={floor:0,uid:0,deaths:[],summons:[],gold:profile.startGold,fog:$('#chkFog')?$('#chkFog').checked:true,floorKills:0,mgrUsed:false,heroes:[],enemies:[],tiles:new Map(),log:[],ach:[],round:0,phase:'plan',viewers:1204+rnd(300),kills:0,order:[],ecards:{},active:null,pick:null,turn:null,planTab:null,W:0,H:0,theme:0};
+  G={floor:0,uid:0,deaths:[],summons:[],gold:profile.startGold,fog:$('#chkFog')?$('#chkFog').checked:true,diff:+(($('#selDiff')||{}).value||1),floorKills:0,mgrUsed:false,heroes:[],enemies:[],tiles:new Map(),log:[],ach:[],round:0,phase:'plan',viewers:1204+rnd(300),kills:0,order:[],ecards:{},active:null,pick:null,turn:null,planTab:null,W:0,H:0,theme:0};
   for(const p of party){
     const C=CLASSES[p.cls];
-    G.heroes.push({id:++G.uid,side:'hero',cls:p.cls,name:p.name||C.name,human:p.human,c:0,r:0,hp:C.hp,lvl:0,hand:C.cards.map((c,i)=>i),known:C.cards.map((c,i)=>i),perks:[],discard:[],lost:[],items:C.gear.slice(),used:{},sel:[],rest:false,st:newSt(),down:false,exhausted:false,kills:0,g:C.g});
+    G.heroes.push({id:++G.uid,side:'hero',cls:p.cls,name:p.name||C.name,human:p.human,c:0,r:0,hp:C.hp,lvl:0,hand:C.cards.map((c,i)=>i),known:C.cards.map((c,i)=>i),perks:[],ilv:Object.fromEntries(C.gear.map(g=>[g,1])),skipped:[],discard:[],lost:[],items:C.gear.slice(),used:{},sel:[],rest:false,st:newSt(),down:false,exhausted:false,kills:0,g:C.g});
   }
   for(const h of G.heroes)h.hp=maxHp(h);
   sys("Welcome, Crawlers. The surface has been cancelled due to low ratings. You are now contestants. Kill things, open boxes, and please try not to embarrass the sponsors.");
@@ -628,7 +724,7 @@ async function beginRound(){
   G.phase='play';
   for(const t of new Set(awake().map(e=>e.type)))G.ecards[t]=pick(ETYPES[t].cards);
   const order=[];
-  for(const h of liveHeroes())order.push({kind:'h',id:h.id,init:h.rest?99:deckOf(h)[h.sel[0]].i,tie:0});
+  for(const h of liveHeroes())order.push({kind:'h',id:h.id,init:heroInit(h),tie:0});
   for(const t in G.ecards)order.push({kind:'e',type:t,init:G.ecards[t].i,tie:1});
   order.sort((a,b)=>a.init-b.init||a.tie-b.tie);
   G.order=order;
@@ -650,7 +746,10 @@ async function beginRound(){
 
 /* ============ hero turns ============ */
 async function startOfTurn(u){
-  if(u.st.poison){log(`${u.name} takes 1 poison damage.`,'dim');damage(u,1,null);await sleep(250)}
+  if(u.st.poison){const pd=1+Math.floor(G.floor/7);log(`${u.name} takes ${pd} poison damage.`,'dim');damage(u,pd,null);await sleep(250)}
+  if(!alive(u))return;
+  if(u.side==='hero'&&!u.summon&&ilv(u,'drone')&&(u.hp<maxHp(u)||u.st.poison)){heal(u,ilv(u,'drone')+1);await sleep(200)}
+  if((u.aff||[]).includes('regen')&&u.hp<u.maxHp){heal(u,2+Math.floor(G.floor/5));await sleep(200)}
 }
 async function heroTurn(h){
   G.active=h.id;renderAll();
@@ -661,8 +760,8 @@ async function heroTurn(h){
   h.st.immob=0;renderAll();
 }
 function longRest(h){
-  const nap=(h.perks||[]).includes('nap');
-  const before=h.hp;h.hp=Math.min(maxHp(h),h.hp+(nap?3:2));h.st.poison=0;
+  const nap=rank(h,'nap');
+  const before=h.hp;h.hp=Math.min(maxHp(h),h.hp+2+nap);h.st.poison=0;
   let lostName='';
   if(h.discard.length&&!nap){const i=rnd(h.discard.length);const c=h.discard.splice(i,1)[0];h.lost.push(c);lostName=deckOf(h)[c].n}
   h.hand.push(...h.discard);h.discard=[];h.used={};
@@ -671,6 +770,7 @@ function longRest(h){
   ach('rest');
 }
 function finishCards(h,lostSet){
+  if(h._rewind){h._rewind=0;h.sel=[];log(`${h.name} rewinds. Those cards never happened.`,'dim');return}
   for(const ci of h.sel){const i=h.hand.indexOf(ci);if(i>=0)h.hand.splice(i,1);(lostSet.has(ci)?h.lost:h.discard).push(ci)}
   h.sel=[];
 }
@@ -680,7 +780,7 @@ async function humanTurn(h){
     renderAll();
     const ch=await new Promise(r=>G.turnResolve=r);G.turnResolve=null;
     if(ch.type==='end')break;
-    if(ch.type==='item'){h.used[ch.id]=1;renderAll();G.cancelOK=true;try{await execSteps(h,ITEMS[ch.id].c)}catch(e){if(e!==CANCEL)throw e;delete h.used[ch.id];log(`${h.name} puts the ${ITEMS[ch.id].n} away.`,'dim')}G.cancelOK=false;continue}
+    if(ch.type==='item'){h.used[ch.id]=(h.used[ch.id]||0)+1;renderAll();G.cancelOK=true;try{await execSteps(h,itemSteps(ch.id,ilv(h,ch.id)))}catch(e){if(e!==CANCEL)throw e;h.used[ch.id]--;log(`${h.name} puts the ${ITEMS[ch.id].n} away.`,'dim')}G.cancelOK=false;continue}
     const card=deckOf(h)[ch.ci];
     if(ch.half==='t')T.top=ch.ci;else T.bot=ch.ci;
     T.used[ch.ci]=ch.half+(ch.basic?'*':'');
@@ -722,14 +822,17 @@ function aiPlan(h){
     if(!best||sc>best.sc)best={sc,sel:[a,b]}}
   h.sel=best.sel;
 }
+function aiItems(h,kind){return h.items.filter(id=>ITEMS[id].c&&usesLeft(h,id)>0&&ITEMS[id].c[0].k===kind)}
+async function aiUse(h,id){h.used[id]=(h.used[id]||0)+1;log(`${h.name} uses ${itemName(id,ilv(h,id))}.`);await execSteps(h,itemSteps(id,ilv(h,id)))}
 async function aiHeroTurn(h){
   const D=deckOf(h);
-  if(h.hp<=maxHp(h)*.45)for(const id of h.items){const it=ITEMS[id];if(it.c&&!h.used[id]&&it.c[0].k==='heal'){h.used[id]=1;log(`${h.name} uses ${it.n}.`);await execSteps(h,it.c);break}}
-  if(h.hand.length-2<=1&&h.discard.length>=2)for(const id of h.items){const it=ITEMS[id];if(it.c&&!h.used[id]&&it.c[0].k==='recover'){h.used[id]=1;log(`${h.name} uses ${it.n}.`);await execSteps(h,it.c);break}}
+  if(h.hp<=maxHp(h)*.45)for(const id of aiItems(h,'heal')){await aiUse(h,id);break}
+  if(h.hand.length-2<=1&&h.discard.length>=2)for(const id of aiItems(h,'recover')){await aiUse(h,id);break}
   const[a,b]=h.sel.map(i=>D[i]);
   const o1=scoreSteps(h,a.t,a.L==='T')+scoreSteps(h,b.b,b.L==='B'),o2=scoreSteps(h,b.t,b.L==='T')+scoreSteps(h,a.b,a.L==='B');
   const top=o1>=o2?a:b,bot=o1>=o2?b:a;
   const lost=new Set();if(top.L==='T')lost.add(top.idx);if(bot.L==='B')lost.add(bot.idx);
+  if(lost.size)for(const id of aiItems(h,'rewind')){await aiUse(h,id);break}
   let first=top.t,second=bot.b;
   const fa=first.find(s=>s.k==='atk');
   if(fa&&!first.some(s=>s.k==='mv')&&second.some(s=>s.k==='mv')){
@@ -737,7 +840,7 @@ async function aiHeroTurn(h){
   }
   log(`${h.name} plays ${top.n} (top) and ${bot.n} (bottom).`,'dim');
   // offensive consumable if useful
-  for(const id of h.items){const it=ITEMS[id];if(it.c&&!h.used[id]&&it.c[0].k==='atk'){const s=it.c[0];if(foesOf(h).filter(f=>hdist(h,f)<=(s.r||1)&&los(h,f)).length&&(G.enemies.some(e=>e.boss||e.elite)||Math.random()<.3)){h.used[id]=1;log(`${h.name} uses ${it.n}.`);await execSteps(h,it.c)}}}
+  for(const id of h.items){if(over())break;const it=ITEMS[id];if(!it.c||usesLeft(h,id)<=0)continue;const st=itemSteps(id,ilv(h,id));const a=st.find(x=>x.k==='atk');if(!a)continue;const pre=st[0].k==='mv'?st[0].v:0;if(foesOf(h).some(f=>hdist(h,f)<=(a.r||1)+(a.aoe||0)+pre&&(pre||los(h,f)))&&(G.enemies.some(e=>e.boss||e.elite)||Math.random()<.35))await aiUse(h,id)}
   if(!over())await execSteps(h,first,second);
   if(alive(h)&&!over())await execSteps(h,second);
   finishCards(h,lost);
@@ -801,6 +904,7 @@ async function execStep(u,s,rest){
       else ch=await pickHex('place',valid,`Summon ${SUMMONS[s.t].n}: pick a hex`,'Skip');
       if(ch)spawnSummon(u,s.t,ch.c,ch.r);return;
     }
+    case'rewind':u._rewind=1;floater(u,'REWIND','#62b9e6',18);return;
     case'recover':{const n=Math.min(s.v,u.discard.length);const got=u.discard.splice(u.discard.length-n,n);u.hand.push(...got);log(`${u.name} recovers ${n} card${n===1?'':'s'}.`,'dim');return}
   }
 }
@@ -830,19 +934,30 @@ async function doAttackStep(u,s,ai){
 }
 function note(u,t){if(u.side==='enemy')return;if(!isAI(u))toast(t);log(`${u.name}: ${t.toLowerCase()}.`,'dim')}
 async function resolveAttack(att,tgt,s,ranged){
-  let v=s.v;
-  if(att.side==='hero'&&!att.summon){const b=bonus(att);v+=ranged?b.rng:b.atk;if(CLASSES[att.cls].flank&&liveHeroes().some(h=>h!==att&&hdist(h,tgt)===1))v+=2}
+  let v=s.v;const hero=att.side==='hero'&&!att.summon;
+  if(hero){const b=bonus(att);v+=ranged?b.rng:b.atk;if(CLASSES[att.cls].flank&&liveHeroes().some(h=>h!==att&&hdist(h,tgt)===1))v+=2;
+    if(tgt.st.stun||tgt.st.immob||tgt.st.poison)v+=rank(att,'brutal');
+    if(tgt.st.poison&&ilv(att,'venom')>1)v+=ilv(att,'venom')-1}
+  if(att.side==='hero'){let bn=0;for(const f of liveHeroes())if(hdist(f,att)<=2)bn=Math.max(bn,ilv(f,'banner'));v+=bn}
   if(att.st.str){v+=att.side==='hero'?2:1;att.st.str=0}
-  const m=pick(MODS);let txt;
-  if(m==='miss'&&(att.perks||[]).includes('lucky')){v-=1;txt='-1 lucky'}else if(m==='miss'){v=0;txt='MISS'}else if(m==='x2'){v*=2;txt='×2'}else{v+=m;txt=m>0?'+'+m:m<0?String(m):'+0'}
-  const sh=shieldOf(tgt),dmg=Math.max(0,v-sh),before=tgt.hp;
+  const lk=hero?rank(att,'lucky'):0,nd=1+(hero?ilv(att,'dice'):0);
+  const val=m=>m==='miss'?(lk?v+lk-2:-99):m==='x2'?v*2:v+m;
+  const draws=[];for(let i=0;i<nd;i++)draws.push(pick(MODS));
+  const m=draws.sort((a,b)=>val(b)-val(a))[0];let txt,missed=false;
+  if(m==='miss'&&lk){const d=lk-2;v+=d;txt=(d>0?'+'+d:d<0?String(d):'+0')+' lucky'}else if(m==='miss'){v=0;txt='MISS';missed=true}else if(m==='x2'){v*=2;txt='×2'}else{v+=m;txt=m>0?'+'+m:m<0?String(m):'+0'}
+  if(nd>1)txt+=' (best of '+nd+')';
+  const rawSh=shieldOf(tgt),pierce=hero?2*ilv(att,'piercer'):(att.pierce||0),sh=Math.max(0,rawSh-pierce);
+  const dmg=missed?0:Math.max(0,v-sh),before=tgt.hp;
   att._lunge={x:tgt.c,y:tgt.r,t:performance.now()};
-  log(`${att.name} → ${tgt.name}: ${s.v} ${txt}${sh?`, shield ${sh}`:''} = ${dmg} dmg`);
-  damage(tgt,dmg,att,txt==='MISS'?'MISS':null);
+  log(`${att.name} → ${tgt.name}: ${s.v} ${txt}${rawSh?`, shield ${rawSh}${pierce?` (−${Math.min(pierce,rawSh)} pierced)`:''}`:''} = ${dmg} dmg`);
+  damage(tgt,dmg,att,missed?'MISS':null);
+  if(hero&&dmg>0&&ilv(att,'fang')&&alive(att)&&att.hp<maxHp(att))heal(att,ilv(att,'fang'));
   if(att.side==='hero'&&!alive(tgt)&&dmg>=before+3)ach('overkill');
-  if(alive(tgt)&&alive(att)&&tgt.st.ret&&hdist(att,tgt)===1){log(`${tgt.name} retaliates for ${tgt.st.ret}.`,'dim');damage(att,tgt.st.ret,tgt)}
-  if(alive(tgt)&&txt!=='MISS'){
-    for(const e of s.eff||[]){if(e==='stun'){tgt.st.stun=1;if(att.side==='hero')ach('stunner')}if(e==='immob')tgt.st.immob=1;if(e==='poison')tgt.st.poison=1;floater(tgt,EFF[e],'#e6c34a',18)}
+  const ret=retOf(tgt);
+  if(alive(tgt)&&alive(att)&&ret&&hdist(att,tgt)===1){log(`${tgt.name} retaliates for ${ret}.`,'dim');damage(att,ret,tgt)}
+  if(alive(tgt)&&!missed){
+    const eff=[...(s.eff||[])];if((hero&&ilv(att,'venom'))||(att.aff||[]).includes('venomous'))if(!eff.includes('poison'))eff.push('poison');
+    for(const e of eff){if(e==='stun'){tgt.st.stun=1;if(att.side==='hero')ach('stunner')}if(e==='immob')tgt.st.immob=1;if(e==='poison')tgt.st.poison=1;floater(tgt,EFF[e],'#e6c34a',18)}
     if(s.push)await push(att,tgt,s.push);
   }
   renderAll();await sleep(isAI(att)?Math.max(200,SPEED*.8):260);
@@ -852,6 +967,7 @@ function damage(u,dmg,src,label){
   if(label==='MISS'){floater(u,'MISS','#a69dba');sfx('miss');return}
   if(dmg<=0){floater(u,'0','#a69dba');return}
   u.hp-=dmg;floater(u,'-'+dmg,'#ff6b5f');sfx('hit');u._hit=performance.now();
+  if(u.hp<=0&&u.side==='hero'&&!u.summon&&ilv(u,'phoenix')&&usesLeft(u,'phoenix')>0){u.used.phoenix=(u.used.phoenix||0)+1;u.hp=Math.min(maxHp(u),3*ilv(u,'phoenix'));floater(u,'REBORN','#f2a93b',20);sys(`${u.name} bursts back up in a puff of smoke and feathers. The Phoenix Down Parka needs a minute.`);return}
   if(u.hp<=0)kill(u,src);
 }
 function heal(u,v){sfx('heal');const amt=Math.min(v,maxHp(u)-u.hp);u.hp+=amt;const cured=u.st.poison;u.st.poison=0;floater(u,'+'+amt+(cured?' cured':''),'#5cc98a')}
@@ -859,8 +975,8 @@ function kill(u,src){
   sfx('die');
   if(u.summon){G.summons=G.summons.filter(x=>x!==u);G.deaths.push({x:u._x,y:u._y,t:performance.now(),col:u.col});log(`${u.name} crumbles back into paperwork.`);return}
   if(u.side==='enemy'){
-    const gold=u.boss?12:u.elite?3:1+rnd(2);G.gold+=gold;floater(u,'+'+gold+'g','#f2c14a',15);
-    G.enemies=G.enemies.filter(e=>e!==u);G.kills++;G.floorKills++;if(src&&src.side==='hero')src.kills++;
+    const gold=(u.boss?12+G.floor:u.elite?3:1+rnd(2))+(src&&src.side==='hero'&&!src.summon?2*ilv(src,'deal'):0);G.gold+=gold;floater(u,'+'+gold+'g','#f2c14a',15);
+    G.enemies=G.enemies.filter(e=>e!==u);G.kills++;G.floorKills++;if(src&&src.side==='hero')src.kills++;if(src&&src.side==='hero'&&!src.summon&&rank(src,'vamp')&&alive(src)&&src.hp<maxHp(src))heal(src,rank(src,'vamp'));
     G.viewers+=Math.round((300+rnd(700))*G.floor*(u.boss?8:u.elite?2:1));
     log(`${u.name} is dead.${src&&src.side==='hero'?` Credit: ${src.name}.`:''}`);
     if(G.kills===1)ach('firstblood');
@@ -898,7 +1014,11 @@ async function moveAlong(u,path,jump){
     if(!jump||i===path.length-1){await checkTrap(u);if(!alive(u))return}
   }
   const t=tile(u.c,u.r);
-  if(u.side==='hero'&&!u.summon&&t.chest){t.chest=false;const gold=3+rnd(4);G.gold+=gold;const pool=itemPool().filter(k=>!u.items.includes(k));const it=pick(pool.length?pool:itemPool());log(`The chest also had ${gold} gold in it.`,'dim');u.items.push(it);if(ITEMS[it].p&&ITEMS[it].p.hp)u.hp+=ITEMS[it].p.hp;log(`${u.name} opens a chest: ${ITEMS[it].n}. ${ITEMS[it].s}`);ach('looted');floater(u,ITEMS[it].n,'#f2a93b',16)}
+  if(u.side==='hero'&&!u.summon&&t.chest){t.chest=false;const gold=3+rnd(4)+G.floor;G.gold+=gold;
+    const fresh=itemPool().filter(k=>!ITEMS[k].leg&&!u.items.includes(k)),ups=u.items.filter(k=>!ITEMS[k].leg&&ilv(u,k)<itemMax(k));
+    const it=fresh.length&&(Math.random()<.6||!ups.length)?pick(fresh):ups.length?pick(ups):null;
+    if(it){const r=giveItem(u,it);const nm=itemName(it,ilv(u,it));log(`${u.name} opens a chest: ${r==='up'?'upgraded to '+nm:nm}. ${ITEMS[it].s}`);floater(u,nm,'#f2a93b',16)}else{G.gold+=10;log(`${u.name} opens a chest stuffed with gold.`)}
+    log(`The chest also had ${gold} gold in it.`,'dim');ach('looted')}
 }
 
 /* ============ movement & AI pathing ============ */
@@ -991,61 +1111,95 @@ function floorClear(){
   G.viewers+=8000*G.floor;
   const wire=4+G.floor*2;G.gold+=wire;
   if(G.floor>profile.best){profile.best=G.floor;saveProfile()}
-  sys(`Floor ${G.floor} cleared. The sponsors wired ${wire} gold. Perks, loot, then shopping. Every gift is a liability.`);
+  sys(`Floor ${G.floor} cleared. The sponsors wired ${wire} gold. Level up, loot, then shopping. Every gift is a liability.`);
   renderAll();sfx('box');
-  const perkOff={},perkCh={},offers={},choice={};
+  const perkOff={},perkCh={},offers={},choice={},newC={},drop={};
   for(const h of G.heroes){
     perkOff[h.id]=perkOptions(h);
-    offers[h.id]=shuffle(itemPool().filter(k=>!h.items.includes(k))).slice(0,3);
-    if(!h.human){perkCh[h.id]=perkOff[h.id].includes('learn')?'learn':perkOff[h.id][0];choice[h.id]=offers[h.id][0]}
+    offers[h.id]=lootOffers(h);
+    newC[h.id]=pendingCard(h,h.lvl+2);
+    if(!h.human){perkCh[h.id]=aiPerk(h,perkOff[h.id]);choice[h.id]=offers[h.id][0];if(newC[h.id]!=null&&h.known.length>=handMax(h))drop[h.id]=weakestCard(h)}
   }
-  const store=shuffle(itemPool()).slice(0,4).map(id=>({id,price:itemPrice(id),sold:0,to:null}));
+  const regular=shuffle(itemPool().filter(k=>!ITEMS[k].leg)).slice(0,4);
+  const legs=G.floor>=2?shuffle(itemPool().filter(k=>ITEMS[k].leg)).slice(0,G.floor>=6?3:2):[];
+  const store=[...legs,...regular];
   const anyHuman=G.heroes.some(h=>h.human);
   let stage='perk',buyer=(G.heroes.find(h=>h.human)||G.heroes[0]).id;
   const ST=['perk','loot','store'],SN=['Level up','Loot box','Sponsor store'];
-  const row=(h,inner)=>`<div class="lrow"><div class="hn"><span>${esc(h.name)} <small>${CLASSES[h.cls].name}${h.human?'':' · CPU'}</small></span><small>Lv ${h.lvl+1}</small></div>${inner}</div>`;
-  const perkDesc=(h,p)=>p==='learn'?`Learn “${CLASSES[h.cls].adv[0]}”. Top: ${stepsText(CLASSES[h.cls].adv[2])}. Bottom: ${stepsText(CLASSES[h.cls].adv[3])}.`:PERKS[p].d;
+  const row=(h,inner)=>`<div class="lrow"><div class="hn"><span>${esc(h.name)} <small>${CLASSES[h.cls].name}${h.human?'':' · CPU'}</small></span><small>Lv ${h.lvl+1} → ${h.lvl+2}</small></div>${inner}</div>`;
+  const perkBtn=(h,p)=>{const r=rank(h,p)+1;return`<button class="opt ${perkCh[h.id]===p?'on':''} ${r>1?'up':''}" data-pk="${p}" data-h="${h.id}" ${h.human?'':'disabled'}><b>${esc(PERKS[p].n)}${r>1?' '+(ROM[r]||r):''}</b>${esc(PERKS[p].d(r))}${PERKS[p].max<99?`<br><small>Rank ${r} of ${PERKS[p].max}</small>`:''}</button>`};
+  const staticCard=c=>`<div class="card scard"><span class="cn">${esc(c.n)}</span><span class="half">${esc(stepsText(c.t))}${c.L==='T'?'<span class="lost">LOST</span>':''}</span><span class="ini">${c.i}</span><span class="half">${esc(stepsText(c.b))}${c.L==='B'?'<span class="lost">LOST</span>':''}</span></div>`;
+  const ncHTML=h=>{const ci=newC[h.id];if(ci==null)return'';const D=deckOf(h),c=D[ci],room=h.known.length<handMax(h);
+    return`<div class="newcard"><div class="sech"><span>New class card · unlocked at Lv ${c.alv}</span><span>deck ${h.known.length}/${handMax(h)}</span></div>${staticCard(c)}${room?'<p class="note" style="margin:0">Joins your deck.</p>':`<label class="note" style="margin:0" for="drop${h.id}">Your deck is full. Retire a card to make room, or pass for now:</label><select id="drop${h.id}" data-drop="${h.id}" ${h.human?'':'disabled'}><option value="">Choose…</option>${h.known.map(k=>`<option value="${k}" ${String(drop[h.id])===String(k)?'selected':''}>Retire ${esc(D[k].n)} (${D[k].i}): ${esc(stepsText(D[k].t))} / ${esc(stepsText(D[k].b))}</option>`).join('')}<option value="skip" ${drop[h.id]==='skip'?'selected':''}>Keep my deck, pass on ${esc(c.n)}</option></select>`}</div>`};
+  const offerBtn=(h,it)=>{const lv=ilv(h,it),nl=lv+1;return`<button class="opt ${choice[h.id]===it?'on':''} ${ITEMS[it].leg?'leg':''} ${lv?'up':''}" data-it="${it}" data-h="${h.id}" ${h.human?'':'disabled'}><b>${lv?'Upgrade to ':''}${esc(itemName(it,nl))}</b>${esc(itemDesc(it,nl))}<br><small>${ITEMS[it].leg?'Legendary · ':''}${esc(ITEMS[it].s)}</small></button>`};
   const draw=()=>{
     let body='',ready=true,next='';
     if(stage==='perk'){
-      ready=G.heroes.every(h=>perkCh[h.id]||!perkOff[h.id].length);
-      body=`<div class="say">Everybody levels up: +1 max HP, plus one perk. Downed crawlers have been revived out of contractual obligation.</div><div class="loot">${G.heroes.map(h=>row(h,`<div class="opts">${perkOff[h.id].map(p=>`<button class="opt ${perkCh[h.id]===p?'on':''}" data-pk="${p}" data-h="${h.id}" ${h.human?'':'disabled'}><b>${esc(PERKS[p].n)}</b>${esc(perkDesc(h,p))}</button>`).join('')}</div>`)).join('')}</div>`;
+      ready=G.heroes.every(h=>(perkCh[h.id]||!perkOff[h.id].length)&&(newC[h.id]==null||h.known.length<handMax(h)||drop[h.id]!=null));
+      body=`<div class="say">Everybody levels up: +1 max HP and a perk. Perks you already have can be ranked up. Every even level also unlocks a new class card.</div><div class="loot">${G.heroes.map(h=>row(h,`<div class="opts">${perkOff[h.id].map(p=>perkBtn(h,p)).join('')}</div>${ncHTML(h)}`)).join('')}</div>`;
       next='Continue to loot';
     }else if(stage==='loot'){
       ready=G.heroes.every(h=>choice[h.id]||!offers[h.id].length);
-      body=`<div class="say">Bronze Loot Boxes. One item each. The rest will be donated to the monsters.</div><div class="loot">${G.heroes.map(h=>row(h,`<div class="opts">${offers[h.id].map(it=>`<button class="opt ${choice[h.id]===it?'on':''}" data-it="${it}" data-h="${h.id}" ${h.human?'':'disabled'}><b>${esc(ITEMS[it].n)}</b>${esc(ITEMS[it].d)}<br><small>${esc(ITEMS[it].s)}</small></button>`).join('')}</div>`)).join('')}</div>`;
+      body=`<div class="say">Loot boxes. One pick each. If you already own it, it gets upgraded instead.</div><div class="loot">${G.heroes.map(h=>row(h,offers[h.id].length?`<div class="opts">${offers[h.id].map(it=>offerBtn(h,it)).join('')}</div>`:'<p class="note">Everything maxed. The box contained 15 gold and a note that says "show-off".</p>')).join('')}</div>`;
       next='Continue to the store';
     }else{
       const b=heroById(buyer);
+      const btn=id=>{const lv=ilv(b,id),max=lv>=itemMax(id),pr=lv?upCost(id,lv):itemPrice(id),poor=G.gold<pr;
+        return`<button class="opt ${ITEMS[id].leg?'leg':''} ${lv&&!max?'up':''}" data-buy="${id}" ${max||poor||!anyHuman?'disabled':''}><b>${max?esc(itemName(id,lv))+' · maxed':lv?`Upgrade to ${esc(itemName(id,lv+1))} · ${pr}g`:`${esc(itemName(id,1))} · ${pr}g`}</b>${esc(itemDesc(id,max?lv:lv+1))}<br><small>${ITEMS[id].leg?'Legendary · ':''}${!max&&poor?'Not enough gold':esc(ITEMS[id].s)}</small></button>`};
+      const owned=b.items.filter(id=>!store.includes(id));
       body=`<div class="say">The Sponsor Store. Prices include a convenience fee, a dungeon fee, and a fee fee.${anyHuman?'':' Your CPU crawlers already went shopping.'}</div>
       <div class="facts"><span class="gold">Party gold <b>${G.gold}</b></span></div>
-      ${anyHuman?`<div class="sech"><span>Buying for</span></div><div class="tabs">${G.heroes.map(h=>`<button class="tab ${h.id===buyer?'on':''}" data-buyer="${h.id}">${esc(h.name)}</button>`).join('')}</div>`:''}
-      <div class="opts">${store.map((x,i)=>{const own=b.items.includes(x.id);return`<button class="opt" data-buy="${i}" ${x.sold||own||G.gold<x.price||!anyHuman?'disabled':''}><b>${esc(ITEMS[x.id].n)} · ${x.price}g</b>${esc(ITEMS[x.id].d)}<br><small>${x.sold?`Sold to ${esc(heroById(x.to).name)}`:own?`${esc(b.name)} already has one`:G.gold<x.price?'Not enough gold':esc(ITEMS[x.id].s)}</small></button>`}).join('')}</div>`;
+      ${anyHuman?`<div class="sech"><span>Shopping for</span></div><div class="tabs">${G.heroes.map(h=>`<button class="tab ${h.id===buyer?'on':''}" data-buyer="${h.id}">${esc(h.name)}</button>`).join('')}</div>`:''}
+      <div class="sech"><span>On the shelf</span><span>${legs.length?'legendaries in gold':''}</span></div><div class="opts">${store.map(btn).join('')}</div>
+      <div class="sech ws"><span>Workshop · upgrade ${esc(b.name)}'s gear</span><span>most gear maxes at IV, legendaries at III</span></div><div class="opts">${owned.map(btn).join('')||'<p class="note">Nothing else to upgrade.</p>'}</div>`;
       next=`Descend to Floor ${G.floor+1}`;
     }
     const chips=`<div class="stage">${ST.map((x,i)=>`<span class="${x===stage?'on':ST.indexOf(stage)>i?'done':''}">${i+1}. ${SN[i]}</span>`).join('')}</div>`;
+    const sc=$('#modal .dlg')?$('#modal .dlg').scrollTop:0;
     openModal(`<div class="k">System notice · Floor ${G.floor} complete</div><h3>${SN[ST.indexOf(stage)]}</h3>${chips}${body}<div class="row"><button class="btn big" id="btnDescend" ${ready?'':'disabled'}>${next}</button>${ready?'':'<span class="note">Make a pick for each player crawler.</span>'}</div>`);
-    document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{perkCh[b.dataset.h]=b.dataset.pk;sfx('click');draw()});
-    document.querySelectorAll('[data-it]').forEach(b=>b.onclick=()=>{choice[b.dataset.h]=b.dataset.it;sfx('click');draw()});
-    document.querySelectorAll('[data-buyer]').forEach(b=>b.onclick=()=>{buyer=+b.dataset.buyer;draw()});
-    document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const x=store[+b.dataset.buy];const h=heroById(buyer);if(x.sold||G.gold<x.price||h.items.includes(x.id))return;G.gold-=x.price;x.sold=1;x.to=h.id;h.items.push(x.id);log(`${h.name} buys ${ITEMS[x.id].n} for ${x.price} gold.`);sfx('box');renderTop();draw()});
+    if(keepScroll)$('#modal .dlg').scrollTop=sc;keepScroll=false;
+    document.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{perkCh[b.dataset.h]=b.dataset.pk;sfx('click');keepScroll=true;draw()});
+    document.querySelectorAll('[data-drop]').forEach(b=>b.onchange=()=>{const v=b.value;drop[b.dataset.drop]=v==='skip'?'skip':v===''?undefined:+v;keepScroll=true;draw()});
+    document.querySelectorAll('[data-it]').forEach(b=>b.onclick=()=>{choice[b.dataset.h]=b.dataset.it;sfx('click');keepScroll=true;draw()});
+    document.querySelectorAll('[data-buyer]').forEach(b=>b.onclick=()=>{buyer=+b.dataset.buyer;keepScroll=true;draw()});
+    document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const id=b.dataset.buy,h=heroById(buyer),lv=ilv(h,id);if(lv>=itemMax(id))return;const pr=lv?upCost(id,lv):itemPrice(id);if(G.gold<pr)return;G.gold-=pr;const r=giveItem(h,id);log(`${h.name} ${r==='up'?'upgrades to':'buys'} ${itemName(id,ilv(h,id))} for ${pr} gold.`);sfx('box');renderTop();keepScroll=true;draw()});
     $('#btnDescend').onclick=()=>{
-      if(stage==='perk'){for(const h of G.heroes){h.lvl++;const p=perkCh[h.id];if(p){h.perks.push(p);if(p==='learn')h.known.push(CLASSES[h.cls].cards.length)}}stage='loot';draw();return}
+      if(stage==='perk'){for(const h of G.heroes){h.lvl++;const p=perkCh[h.id];if(p){h.perks.push(p);if(p==='focus')h.skipped=[]}
+          const ci=newC[h.id];if(ci!=null){const d=drop[h.id];if(d==='skip'){h.skipped=h.skipped||[];h.skipped.push(ci);log(`${h.name} passes on ${deckOf(h)[ci].n} for now.`,'dim')}else{if(d!=null&&h.known.length>=handMax(h)){h.known=h.known.filter(k=>k!==d);log(`${h.name} retires ${deckOf(h)[d].n}.`,'dim')}if(h.known.length<handMax(h)){h.known.push(ci);log(`${h.name} learns ${deckOf(h)[ci].n}.`,'ach')}}}}
+        stage='loot';draw();return}
       if(stage==='loot'){
-        for(const h of G.heroes)if(choice[h.id])h.items.push(choice[h.id]);
-        if(!anyHuman)for(const x of store.slice().sort((a,b)=>a.price-b.price)){const h=G.heroes.filter(h=>!h.items.includes(x.id)).sort((a,b)=>a.items.length-b.items.length)[0];if(h&&G.gold>=x.price){G.gold-=x.price;x.sold=1;x.to=h.id;h.items.push(x.id);log(`${h.name} buys ${ITEMS[x.id].n}.`,'dim')}}
+        for(const h of G.heroes){if(choice[h.id])giveItem(h,choice[h.id]);else if(!offers[h.id].length)G.gold+=15}
+        if(!anyHuman)autoShop(store);
         stage='store';draw();return}
       closeModal();G.viewers+=2000;nextFloor();
     };
   };
+  let keepScroll=false;
   draw();
 }
 function perkOptions(h){
-  const advIdx=CLASSES[h.cls].cards.length;
-  const pool=Object.keys(PERKS).filter(k=>(PERKS[k].multi||!h.perks.includes(k))&&(k!=='learn'||!h.known.includes(advIdx)));
+  const pool=Object.keys(PERKS).filter(k=>rank(h,k)<PERKS[k].max);
   const o=shuffle(pool).slice(0,3);
-  if(!h.known.includes(advIdx)&&!o.includes('learn')&&Math.random()<.5)o[2]='learn';
+  return o.length?o:['tough'];
+}
+function aiPerk(h,o){const pref=CLASSES[h.cls].rng>1?['sharp','pockets','brutal','lucky','focus','iron','vamp','quick','tough']:['heavy','iron','vamp','brutal','pockets','lucky','focus','quick','tough'];return pref.find(p=>o.includes(p))||o[0]}
+function lootOffers(h){
+  const fresh=shuffle(itemPool().filter(k=>!ITEMS[k].leg&&!h.items.includes(k)));
+  const ups=shuffle(h.items.filter(k=>ilv(h,k)<itemMax(k)));
+  const legs=shuffle(itemPool().filter(k=>ITEMS[k].leg&&!h.items.includes(k)));
+  const o=[];
+  if(G.floor>=4&&legs.length&&Math.random()<Math.min(.5,.06*G.floor))o.push(legs[0]);
+  while(o.length<3&&(fresh.length||ups.length)){if(fresh.length&&(Math.random()<.5||!ups.length))o.push(fresh.shift());else o.push(ups.shift())}
   return o;
+}
+function autoShop(store){
+  for(let guard=0;guard<16;guard++){
+    const opts=[];
+    for(const h of G.heroes)for(const id of new Set([...store,...h.items])){const lv=ilv(h,id);if(lv>=itemMax(id)||(!lv&&!store.includes(id)))continue;const pr=lv?upCost(id,lv):itemPrice(id);if(pr>G.gold)continue;opts.push({h,id,pr,w:(ITEMS[id].leg?3:1)*(lv?1:1.5)-h.items.length*.05})}
+    if(!opts.length)break;
+    opts.sort((a,b)=>b.w-a.w||a.pr-b.pr);const o=opts[rnd(Math.min(3,opts.length))];
+    G.gold-=o.pr;const r=giveItem(o.h,o.id);log(`${o.h.name} ${r==='up'?'upgrades to':'buys'} ${itemName(o.id,ilv(o.h,o.id))} for ${o.pr} gold.`,'dim');
+  }
 }
 function spawnSummon(owner,t,c,r){
   const S=SUMMONS[t];const hp=S.hp+Math.floor(G.floor/2);
@@ -1088,6 +1242,10 @@ function managerTips(){
     if(e0.mv>=3&&!T.boss)L.push('Fast. It will reach your back line; park a sturdy crawler in front of your casters.');
     if(e0.maxHp<=5&&!T.boss)L.push("Fragile. A single 3-damage hit usually does it. Don't waste a LOST card here.");
     const c=G.ecards[t];if(G.phase==='play'&&c)L.push(`This round it's playing ${c.n} at initiative ${c.i}.`);
+    const affs=[...new Set(list.flatMap(e=>e.aff||[]))];if(affs.length)L.push(`Modifiers: ${affs.map(a=>AFFIX[a].adj+' ('+AFFIX[a].d.toLowerCase()+')').join(', ')}.`);
+    if(affs.includes('regen'))L.push('Regenerates, so finish it in one round instead of chipping at it.');
+    if(affs.includes('thorny'))L.push('Thorny: it hits back in melee. Use ranged attacks or accept the paper cuts.');
+    if(e0.pierce)L.push(`Pierces ${e0.pierce} Shield, so stacking armor helps less down here.`);
     if(!L.length)L.push('Nothing special. Hit it until it stops.');
     threats.push({name:T.n+(list.length>1?` ×${list.length}`:''),elite:list.some(e=>e.elite),lines:L});
   }
@@ -1182,7 +1340,7 @@ function gameOver(){
 
 /* ============ save / load ============ */
 function save(){try{const s={...G,tiles:[...G.tiles.values()],pick:null,turn:null,turnResolve:null,deaths:[]};localStorage.setItem(SAVE_KEY,JSON.stringify(s))}catch(e){}}
-function loadSave(){try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;const s=JSON.parse(raw);s.tiles=new Map(s.tiles.map(t=>[key(t.c,t.r),t]));s.summons=s.summons||[];s.gold=s.gold||0;s.floorKills=s.floorKills||0;s.heroes.forEach(h=>{h.known=h.known||CLASSES[h.cls].cards.map((c,i)=>i);h.perks=h.perks||[]});if(s.fog===undefined)s.enemies.forEach(e=>e.awake=true);return s}catch(e){return null}}
+function loadSave(){try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;const s=JSON.parse(raw);s.tiles=new Map(s.tiles.map(t=>[key(t.c,t.r),t]));s.summons=s.summons||[];s.gold=s.gold||0;s.floorKills=s.floorKills||0;s.heroes.forEach(h=>{h.known=h.known||CLASSES[h.cls].cards.map((c,i)=>i);h.perks=h.perks||[];migrateItems(h)});s.enemies.forEach(e=>{e.aff=e.aff||[];e.pierce=e.pierce||0});s.diff=s.diff||1;if(s.fog===undefined)s.enemies.forEach(e=>e.awake=true);return s}catch(e){return null}}
 
 /* ============ rendering: canvas ============ */
 const cv=$('#cv'),cx=cv.getContext('2d');
@@ -1337,13 +1495,13 @@ function inspectUnit(u){
   if(u.summon)return inspectSay(u.name,'Summon',`An undead helper raised by ${heroById(u.owner)?heroById(u.owner).name:'a crawler'}. Acts right after its master. Unpaid, unbothered, unalive.`,`<span>HP <b>${u.hp}/${u.maxHp}</b></span><span>Move <b>${u.mv}</b></span><span>Attack <b>${u.atk}</b></span>`);
   if(u.side==='enemy'){
     const T=ETYPES[u.type],c=G.ecards[u.type];
-    const facts=`<span>HP <b>${u.hp}/${u.maxHp}</b></span><span>Move <b>${u.mv}</b></span><span>Attack <b>${u.atk}</b></span><span>Range <b>${u.rng||'melee'}</b></span>${u.sh?`<span>Shield <b>${u.sh}</b></span>`:''}${u.tg>1?`<span>Targets <b>${u.tg}</b></span>`:''}${u.fly?'<span><b>Flying</b></span>':''}${c?`<span>This round <b>${esc(c.n)}</b> (${c.i})</span>`:''}`;
+    const facts=`<span>HP <b>${u.hp}/${u.maxHp}</b></span><span>Move <b>${u.mv}</b></span><span>Attack <b>${u.atk}</b></span><span>Range <b>${u.rng||'melee'}</b></span>${u.sh?`<span>Shield <b>${u.sh}</b></span>`:''}${u.tg>1?`<span>Targets <b>${u.tg}</b></span>`:''}${u.fly?'<span><b>Flying</b></span>':''}${u.pierce?`<span>Pierce <b>${u.pierce}</b></span>`:''}${(u.aff||[]).map(a=>`<span><b>${AFFIX[a].adj}</b> ${AFFIX[a].d}</span>`).join('')}${c?`<span>This round <b>${esc(c.n)}</b> (${c.i})</span>`:''}`;
     const extra=u.elite?" This one is an Elite: more HP, more damage, same lack of dental coverage.":"";
     inspectSay(u.name,u.boss?'Floor boss':u.elite?'Elite monster':'Monster',u.snark+extra,facts);
   }else{
     const C=CLASSES[u.cls],D=C.deck;
     const facts=`<span>HP <b>${u.hp}/${maxHp(u)}</b></span><span>Hand <b>${u.hand.length}</b></span><span>Discard <b>${u.discard.length}</b></span><span>Lost <b>${u.lost.length}</b></span><span>Kills <b>${u.kills}</b></span>`;
-    inspectSay(`${u.name} the ${C.name}`,u.human?'Crawler · player':'Crawler · CPU',C.snark+` Gear: ${u.items.map(i=>ITEMS[i].n).join(', ')}.`+(u.perks.length?` Perks: ${u.perks.map(p=>PERKS[p].n).join(', ')}.`:''),facts);
+    inspectSay(`${u.name} the ${C.name}`,u.human?'Crawler · player':'Crawler · CPU',C.snark+` Gear: ${u.items.map(i=>itemName(i,ilv(u,i))).join(', ')}.`+(u.perks.length?` Perks: ${perkSummary(u)}.`:''),facts);
   }
 }
 function inspectTrap(t){
@@ -1368,7 +1526,7 @@ function renderOrder(){
   const el=$('#order');
   if(G.phase==='play'&&G.order.length){el.innerHTML=G.order.map(chipFor).join('')}
   else{
-    const hs=liveHeroes().map(h=>`<div class="chip"><span class="in">${h.rest?'99':h.sel.length?deckOf(h)[h.sel[0]].i:'··'}</span><span class="dot" style="background:${CLASSES[h.cls].col}"></span>${esc(h.name)}</div>`);
+    const hs=liveHeroes().map(h=>`<div class="chip"><span class="in">${h.rest?'99':h.sel.length?heroInit(h):'··'}</span><span class="dot" style="background:${CLASSES[h.cls].col}"></span>${esc(h.name)}</div>`);
     const es=[...new Set(awake().map(e=>e.type))].map(t=>`<button class="chip enemy" data-et="${t}"><span class="in">??</span><span class="dot" style="background:${ETYPES[t].col}"></span>${esc(ETYPES[t].n)}${awake().filter(e=>e.type===t).length>1?' ×'+awake().filter(e=>e.type===t).length:''}</button>`);
     const hid=G.enemies.length-awake().length;if(hid)es.push(`<div class="chip" title="Monsters you haven't spotted yet"><span class="in">??</span>${hid} unseen</div>`);
     el.innerHTML=hs.join('')+es.join('');
@@ -1418,7 +1576,7 @@ function renderAct(){
       let html=`<h3>${esc(h.name)}'s turn</h3><p class="sub">${T.top===null&&T.bot===null?'Use the top half of one card and the bottom half of the other, in either order.':T.top===null?'Now use a top half.':'Now use a bottom half.'}</p>`;
       html+=`<div class="play2">${h.sel.map(ci=>`<div class="pcard"><div class="cn">${esc(D[ci].n)}<span>${D[ci].i}</span></div>${half(ci,'t')}${half(ci,'b')}</div>`).join('')}</div>`;
       const items=h.items.filter(id=>ITEMS[id].c);
-      if(items.length)html+=`<div class="row">${items.map(id=>`<button class="btn item" data-item="${id}" ${busy||h.used[id]?'disabled':''} title="${esc(ITEMS[id].d)}">${esc(ITEMS[id].n)}${h.used[id]?' (used)':''}</button>`).join('')}</div>`;
+      if(items.length)html+=`<div class="row">${items.map(id=>{const left=usesLeft(h,id),lv=ilv(h,id);return`<button class="btn item" data-item="${id}" ${busy||left<=0?'disabled':''} title="${esc(itemDesc(id,lv))}">${esc(itemName(id,lv))}${left<=0?' (used)':usesPerFloor(h,id)>1?` (${left} left)`:''}</button>`}).join('')}</div>`;
       html+=`<div class="row"><button class="btn ghost" id="btnEnd" ${busy?'disabled':''}>End turn</button></div>`;
       el.innerHTML=html;
       el.querySelectorAll('[data-ci][data-h]').forEach(b=>b.onclick=()=>choose({type:'half',ci:+b.dataset.ci,half:b.dataset.h,basic:!!b.dataset.basic}));
@@ -1440,7 +1598,7 @@ function renderRoster(){
   $('#roster').innerHTML=G.heroes.map(h=>{
     const gone=h.down||h.exhausted;const mh=maxHp(h);
     const st=[shieldOf(h)?`<span class="st sh">⛨${shieldOf(h)}</span>`:'',h.st.stun?'<span class="st stun">STUN</span>':'',h.st.immob?'<span class="st immob">IMMOB</span>':'',h.st.poison?'<span class="st poison">POISON</span>':'',h.st.str?'<span class="st str">STR</span>':'',h.st.ret?`<span class="st" style="background:#e5703a;color:#221">RET${h.st.ret}</span>`:'',h.st.taunt?'<span class="st" style="background:var(--sys);color:#221">TAUNT</span>':''].join('');
-    return`<button class="hero ${G.active===h.id?'now':''} ${gone?'gone':''}" data-hid="${h.id}"><span class="tok" style="background:${CLASSES[h.cls].col}">${CLASSES[h.cls].g}</span><span style="min-width:0"><span class="hn"><span>${esc(h.name)}${st?' '+st:''}</span><small>${gone?(h.down?'DOWN':'EXHAUSTED'):`${h.hp}/${mh} HP`}</small></span><span class="bar"><i style="width:${gone?0:100*h.hp/mh}%"></i></span><span class="meta"><span>${CLASSES[h.cls].name}${h.human?'':' · CPU'}</span><span>hand ${h.hand.length}</span><span>disc ${h.discard.length}</span><span>lost ${h.lost.length}</span><span>Lv ${h.lvl+1}</span></span>${h.perks&&h.perks.length?`<span class="perkline">${h.perks.map(p=>PERKS[p].n).join(' · ')}</span>`:''}</span></button>`;
+    return`<button class="hero ${G.active===h.id?'now':''} ${gone?'gone':''}" data-hid="${h.id}"><span class="tok" style="background:${CLASSES[h.cls].col}">${CLASSES[h.cls].g}</span><span style="min-width:0"><span class="hn"><span>${esc(h.name)}${st?' '+st:''}</span><small>${gone?(h.down?'DOWN':'EXHAUSTED'):`${h.hp}/${mh} HP`}</small></span><span class="bar"><i style="width:${gone?0:100*h.hp/mh}%"></i></span><span class="meta"><span>${CLASSES[h.cls].name}${h.human?'':' · CPU'}</span><span>hand ${h.hand.length}</span><span>disc ${h.discard.length}</span><span>lost ${h.lost.length}</span><span>Lv ${h.lvl+1}</span></span>${h.perks&&h.perks.length?`<span class="perkline">${perkSummary(h)}</span>`:''}</span></button>`;
   }).join('');
   document.querySelectorAll('[data-hid]').forEach(b=>b.onclick=()=>inspectUnit(heroById(+b.dataset.hid)));
 }
@@ -1473,15 +1631,16 @@ function openBox(){
 }
 function confirmItem(id){
   const I=ITEMS[id];if(!I||!G.turn)return;
-  const h=G.turn.h,a=I.c[0];let warn='';
-  if(a.k==='atk'){const r=a.r||1;if(!foesOf(h).some(f=>hdist(h,f)<=r+(a.aoe||0)&&los(h,f)))warn=`No monsters in range right now (Range ${a.r||'melee'}). Using it here would waste it.`}
-  if(a.k==='heal'&&!a.all&&h.hp>=maxHp(h)&&!h.st.poison)warn="You're already at full HP.";
-  if(a.k==='recover'&&!h.discard.length)warn='Your discard pile is empty, so there is nothing to recover.';
-  openModal(`<div class="k">Item · once per floor</div><h3>${esc(I.n)}</h3>
-    <div class="facts"><span>Effect <b>${esc(I.d.replace(/^Once per floor: /,''))}</b></span></div>
+  const h=G.turn.h,lv=ilv(h,id),steps=itemSteps(id,lv),a=steps.find(x=>x.k==='atk'),first=steps[0];let warn='';
+  if(a&&first.k!=='mv'){const r=a.r||1;if(!foesOf(h).some(f=>hdist(h,f)<=r+(a.aoe||0)&&los(h,f)))warn=`No monsters in range right now (Range ${a.r||'melee'}). Using it here would waste it.`}
+  if(first.k==='heal'&&!first.all&&h.hp>=maxHp(h)&&!h.st.poison)warn="You're already at full HP.";
+  if(first.k==='recover'&&!h.discard.length)warn='Your discard pile is empty, so there is nothing to recover.';
+  const left=usesLeft(h,id),per=usesPerFloor(h,id);
+  openModal(`<div class="k">${I.leg?'Legendary item':'Item'} · ${left} of ${per} use${per>1?'s':''} left this floor</div><h3>${esc(itemName(id,lv))}</h3>
+    <div class="facts"><span>Effect <b>${esc(stepsText(steps))}</b></span>${lv<itemMax(id)?`<span>Next upgrade <b>${esc(itemDesc(id,lv+1))}</b></span>`:'<span><b>Fully upgraded</b></span>'}</div>
     <div class="say" id="say"></div>
     ${warn?`<p class="note" style="color:var(--hp)">${warn}</p>`:''}
-    <p class="note">Using it spends it until the next floor or your next long rest. It doesn't use up either card half, and you can still cancel before picking a hex.</p>
+    <p class="note">${first.k==='rewind'?"Use it any time this turn; it applies to both cards you're playing. ":''}Uses come back on the next floor or your next long rest. It doesn't use up either card half, and you can still cancel before picking a hex.</p>
     <div class="row"><button class="btn" id="mUse">Use it</button><button class="btn ghost" id="mClose">Not now</button></div>`);
   type($('#say'),I.s);
   $('#mUse').onclick=()=>{closeModal();choose({type:'item',id})};$('#mClose').onclick=closeModal;$('#mUse').focus();
@@ -1506,10 +1665,10 @@ function renderParty(){
 const openDeck=new Set();
 function renderClasses(){
   $('#classes').innerHTML=Object.entries(CLASSES).map(([k,C])=>!classUnlocked(k)?`<div class="cls locked"><h4><span class="tok" style="background:#3a3150">??</span>${C.name}</h4><p class="role">${C.role}</p><p class="lockt">Locked · found in a Sponsor Box</p></div>`:`<div class="cls"><h4><span class="tok" style="background:${C.col}">${C.g}</span>${C.name}</h4><p class="role">${C.role}</p>
-    <div class="stats"><span>HP <b>${C.hp}</b></span><span>Cards <b>${C.cards.length}</b></span><span>Lost cards <b>${C.cards.filter(c=>c[4]).length}</b></span></div>
+    <div class="stats"><span>HP <b>${C.hp}</b></span><span>Cards <b>${C.cards.length}+${C.advs.length}</b></span><span>Lost cards <b>${C.cards.filter(c=>c[4]).length}</b></span></div>
     <p class="role" style="color:var(--fg)">${C.passive}</p>
     <ul class="gear">${C.gear.map(g=>`<li><b>${ITEMS[g].n}</b>: ${ITEMS[g].d}</li>`).join('')}</ul>
-    ${openDeck.has(k)?`<div class="deck">${C.deck.map(d=>`<div><b>${d.i}</b><span><strong>${d.n}</strong>${d.L?' <span class="lost">LOST</span>':''}${d.adv?' <span class="lost" style="background:var(--cool);color:#112">PERK</span>':''}<br><small>Top: ${stepsText(d.t)}<br>Bottom: ${stepsText(d.b)}</small></span></div>`).join('')}</div>`:''}
+    ${openDeck.has(k)?`<div class="deck">${C.deck.map(d=>`<div><b>${d.i}</b><span><strong>${d.n}</strong>${d.L?' <span class="lost">LOST</span>':''}${d.adv?' <span class="lost" style="background:var(--cool);color:#112">LV '+d.alv+'</span>':''}<br><small>Top: ${stepsText(d.t)}<br>Bottom: ${stepsText(d.b)}</small></span></div>`).join('')}</div>`:''}
     <div class="flex" style="margin-top:auto"><button class="btn" data-add="${k}" ${PARTY.length>=4?'disabled':''}>Add to party</button><button class="btn ghost" data-deck="${k}">${openDeck.has(k)?'Hide':'View'} cards</button></div></div>`).join('');
   document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(PARTY.length>=4)return;const used=PARTY.map(p=>p.name);PARTY.push({cls:b.dataset.add,name:shuffle(NAMES.filter(n=>!used.includes(n)))[0]||'Crawler',human:!PARTY.some(p=>p.human)});renderParty();renderClasses()});
   document.querySelectorAll('[data-deck]').forEach(b=>b.onclick=()=>{const k=b.dataset.deck;openDeck.has(k)?openDeck.delete(k):openDeck.add(k);renderClasses()});
@@ -1527,6 +1686,10 @@ function showRules(){
   <li><b>Call Manager</b> once per floor for a threat report on what's in sight and which of your cards to use or avoid.</li>
   <li><b>Clear the floor</b> to level up: +1 max HP and a perk (some teach a signature card). Then pick loot and spend gold in the Sponsor Store. Kills, chests and cleared floors pay gold.</li>
   <li><b>New mechanics:</b> Retaliate hits back at melee attackers. Taunt makes monsters target you. Summons act right after their master.</li>
+  <li><b>Gear upgrades.</b> A second copy of an item upgrades it (up to IV; legendaries up to III). Upgraded consumables hit harder and can be used twice per floor from III. Upgrade anything you own in the store's Workshop.</li>
+  <li><b>Class cards.</b> Every even level unlocks a new card for your class. Your deck holds your starting cards plus two (more with the Overtime perk); after that, retire a card to make room.</li>
+  <li><b>Legendary items</b> (gold) sit on the store shelf from floor 2 and sometimes drop from loot boxes. They add new rules: revive, lifesteal, armor piercing, extra modifier draws, rewinding a turn, and more.</li>
+  <li><b>Deeper floors.</b> From floor 6, monsters roll modifiers (Armored, Vicious, Regenerating, Thorny…) and start piercing shields. Floor 8+ adds Tier 4 monsters, and the boss roster grows to five. Pick a difficulty on the party screen.</li>
   <li><b>Sponsor Boxes</b> come from floor bosses and runs that reach floor 3. Open them on the title screen to unlock new classes and loot for every future run.</li>
   <li><b>Click any monster, trap, or crawler</b> to hear what the System thinks of it.</li></ol></div>
   <div class="row"><button class="btn" id="mClose">Got it</button></div>`);
